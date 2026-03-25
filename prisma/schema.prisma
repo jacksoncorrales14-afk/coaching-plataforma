@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("admin") // admin = la coach
+  createdAt DateTime @default(now())
+  clases    Clase[]
+}
+
+model Clase {
+  id          String   @id @default(cuid())
+  titulo      String
+  descripcion String   @db.Text
+  contenido   String   @db.Text // URL del video o contenido embebido
+  imagen      String   @default("")
+  precio      Float    @default(0)
+  categoria   String   @default("General")
+  publicada   Boolean  @default(false)
+  orden       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
+  codigos     Codigo[]
+  accesos     Acceso[]
+}
+
+model Codigo {
+  id        String   @id @default(cuid())
+  codigo    String   @unique
+  claseId   String
+  clase     Clase    @relation(fields: [claseId], references: [id], onDelete: Cascade)
+  usado     Boolean  @default(false)
+  usadoPor  String?  // email o nombre de la clienta
+  usadoAt   DateTime?
+  createdAt DateTime @default(now())
+  acceso    Acceso?
+}
+
+model Acceso {
+  id        String   @id @default(cuid())
+  email     String
+  nombre    String
+  claseId   String
+  clase     Clase    @relation(fields: [claseId], references: [id], onDelete: Cascade)
+  codigoId  String   @unique
+  codigo    Codigo   @relation(fields: [codigoId], references: [id])
+  createdAt DateTime @default(now())
+}
