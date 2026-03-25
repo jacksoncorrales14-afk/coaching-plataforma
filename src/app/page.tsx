@@ -64,7 +64,7 @@ export default function Home() {
                 Realiza tu pago
               </h3>
               <p className="text-sm text-gray-500">
-                Contacta a tu coach para realizar el pago y recibir tu codigo de
+                Contacta a Deby Chantell para realizar el pago y recibir tu codigo de
                 acceso unico.
               </p>
             </div>

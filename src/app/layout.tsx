@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Academia de Marketing - Tu Coach Digital",
+  title: "Deby Chantell Coach Academy",
   description:
     "Aprende marketing digital con clases y capacitaciones exclusivas",
 };
@@ -26,7 +26,7 @@ export default function RootLayout({
           <Navbar />
           <main className="min-h-screen">{children}</main>
           <footer className="border-t border-gray-200 bg-white py-8 text-center text-sm text-gray-500">
-            <p>&copy; 2025 Academia de Marketing. Todos los derechos reservados.</p>
+            <p>&copy; 2025 Deby Chantell Coach Academy. Todos los derechos reservados.</p>
           </footer>
         </Providers>
       </body>
