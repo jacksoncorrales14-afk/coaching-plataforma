@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { nanoid } from "nanoid";
 
 export async function POST(req: NextRequest) {
@@ -39,6 +39,8 @@ export async function POST(req: NextRequest) {
 
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
+
+  const supabase = getSupabase();
 
   const { error } = await supabase.storage
     .from("imagenes")
