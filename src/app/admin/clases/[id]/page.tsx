@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ImageUpload } from "@/components/ImageUpload";
 
 export default function EditarClasePage() {
   const { data: session, status } = useSession();
@@ -101,15 +102,10 @@ export default function EditarClasePage() {
           />
         </div>
 
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Imagen de portada (URL)</label>
-          <input
-            type="text"
-            className="input-field"
-            value={form.imagen}
-            onChange={(e) => setForm({ ...form, imagen: e.target.value })}
-          />
-        </div>
+        <ImageUpload
+          value={form.imagen}
+          onChange={(url) => setForm({ ...form, imagen: url })}
+        />
 
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
