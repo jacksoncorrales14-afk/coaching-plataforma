@@ -8,7 +8,6 @@ interface Clase {
   id: string;
   titulo: string;
   descripcion: string;
-  contenido: string;
   imagen: string;
   precio: number;
   categoria: string;
@@ -18,11 +17,12 @@ export default function ClaseDetailPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const [clase, setClase] = useState<Clase | null>(null);
+  const [contenido, setContenido] = useState<string | null>(null);
   const [hasAccess, setHasAccess] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Obtener datos de la clase
+    // Obtener datos de la clase (ya no incluye contenido para usuarios públicos)
     fetch(`/api/clases/${params.id}`)
       .then((r) => r.json())
       .then((data) => {
@@ -30,15 +30,20 @@ export default function ClaseDetailPage() {
         setLoading(false);
       });
 
-    // Verificar acceso
+    // Verificar acceso y obtener contenido desde endpoint protegido
     const email =
       searchParams.get("email") || localStorage.getItem("coach_email");
     if (email) {
-      fetch(`/api/mis-clases?email=${encodeURIComponent(email)}`)
-        .then((r) => r.json())
-        .then((accesos: any[]) => {
-          const tiene = accesos.some((a) => a.clase.id === params.id);
-          setHasAccess(tiene);
+      fetch(`/api/clases/${params.id}/contenido?email=${encodeURIComponent(email)}`)
+        .then((r) => {
+          if (r.ok) {
+            setHasAccess(true);
+            return r.json();
+          }
+          return null;
+        })
+        .then((data) => {
+          if (data) setContenido(data.contenido);
         });
     }
   }, [params.id, searchParams]);
@@ -73,7 +78,7 @@ export default function ClaseDetailPage() {
     return null;
   };
 
-  const embedUrl = getEmbedUrl(clase.contenido);
+  const embedUrl = contenido ? getEmbedUrl(contenido) : null;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
@@ -85,7 +90,7 @@ export default function ClaseDetailPage() {
       </Link>
 
       <div className="card">
-        <span className="mb-4 inline-block rounded-full bg-primary-100 px-3 py-1 text-xs font-medium text-primary-700">
+        <span className="mb-4 inline-block rounded-full bg-nude-100 px-3 py-1 text-xs font-medium text-gray-700">
           {clase.categoria}
         </span>
         <h1 className="mb-4 text-3xl font-bold text-gray-900">
@@ -108,18 +113,18 @@ export default function ClaseDetailPage() {
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 />
               </div>
-            ) : clase.contenido ? (
+            ) : contenido ? (
               <div className="rounded-xl bg-gray-50 p-6">
                 <p className="mb-2 text-sm font-medium text-gray-700">
                   Enlace al contenido:
                 </p>
                 <a
-                  href={clase.contenido}
+                  href={contenido}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary-600 underline hover:text-primary-800"
+                  className="text-wine-600 underline hover:text-wine-700"
                 >
-                  {clase.contenido}
+                  {contenido}
                 </a>
               </div>
             ) : (
@@ -150,7 +155,7 @@ export default function ClaseDetailPage() {
               <p className="mb-4 text-sm text-gray-400">
                 Necesitas un codigo de acceso para ver esta clase.
               </p>
-              <p className="mb-6 text-2xl font-bold text-primary-600">
+              <p className="mb-6 text-2xl font-bold text-black">
                 ${clase.precio.toFixed(2)}
               </p>
               <Link href="/desbloquear" className="btn-primary">

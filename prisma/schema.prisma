@@ -24,6 +24,7 @@ model Clase {
   descripcion String   @db.Text
   contenido   String   @db.Text // URL del video o contenido embebido
   imagen      String   @default("")
+  imagenPos   String   @default("50% 50%") // object-position CSS
   precio      Float    @default(0)
   categoria   String   @default("General")
   publicada   Boolean  @default(false)
@@ -57,4 +58,154 @@ model Acceso {
   codigoId  String   @unique
   codigo    Codigo   @relation(fields: [codigoId], references: [id])
   createdAt DateTime @default(now())
+  expiraAt  DateTime @default(now()) // 30 días después de la activación
+
+  @@index([email])
+  @@index([claseId])
+}
+
+// ─── MEMBRESÍA ───────────────────────────────────────────
+
+model Membresia {
+  id              String   @id @default(cuid())
+  email           String
+  nombre          String
+  plan            String   // "mensual" | "trimestral"
+  estado          String   @default("activa") // "activa" | "cancelada" | "expirada"
+  precioMensual   Float    @default(195)
+  stripeSubId     String?  // ID de suscripción en Stripe
+  stripeCustId    String?  // ID de cliente en Stripe
+  inicioAt        DateTime @default(now())
+  expiraAt        DateTime
+  canceladaAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([email])
+}
+
+// ─── PROGRAMAS POR NIVELES (solo membresía) ──────────────
+
+model Programa {
+  id          String   @id @default(cuid())
+  titulo      String
+  descripcion String   @db.Text
+  imagen      String   @default("")
+  imagenPos   String   @default("50% 50%")
+  publicado   Boolean  @default(false)
+  orden       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  niveles     Nivel[]
+}
+
+model Nivel {
+  id          String   @id @default(cuid())
+  titulo      String
+  descripcion String   @default("")
+  orden       Int      @default(0)
+  programaId  String
+  programa    Programa @relation(fields: [programaId], references: [id], onDelete: Cascade)
+  videos      Video[]
+  createdAt   DateTime @default(now())
+
+  @@index([programaId])
+}
+
+model Video {
+  id        String   @id @default(cuid())
+  titulo    String
+  url       String   @db.Text // URL del video
+  duracion  Int      @default(0) // duración en segundos
+  orden     Int      @default(0)
+  nivelId   String
+  nivel     Nivel    @relation(fields: [nivelId], references: [id], onDelete: Cascade)
+  tareas    Tarea[]
+  createdAt DateTime @default(now())
+
+  @@index([nivelId])
+}
+
+model Tarea {
+  id          String            @id @default(cuid())
+  titulo      String
+  descripcion String            @default("") @db.Text
+  videoId     String
+  video       Video             @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  orden       Int               @default(0)
+  createdAt   DateTime          @default(now())
+  completadas TareaCompletada[]
+
+  @@index([videoId])
+}
+
+model TareaCompletada {
+  id           String   @id @default(cuid())
+  email        String
+  tareaId      String
+  tarea        Tarea    @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+  nota         String   @default("") @db.Text // respuesta o nota del estudiante
+  completadaAt DateTime @default(now())
+
+  @@unique([email, tareaId])
+  @@index([email])
+}
+
+model ProgresoVideo {
+  id        String   @id @default(cuid())
+  email     String
+  videoId   String
+  visto     Boolean  @default(false) // true cuando vio el 100%
+  progreso  Float    @default(0) // porcentaje 0-100
+  vistoAt   DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([email, videoId])
+  @@index([email])
+}
+
+// ─── PERFIL DE ESTUDIANTE ─────────────────────────────────
+
+model Perfil {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  nombre    String
+  avatar    String   @default("") // URL de foto en Supabase
+  bio       String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── COMUNIDAD ───────────────────────────────────────────
+
+model Comentario {
+  id           String        @id @default(cuid())
+  email        String
+  nombre       String
+  avatar       String        @default("")
+  contenido    String        @db.Text
+  tipo         String        // "curso" | "programa" | "comunidad"
+  refId        String        // ID del curso, programa o "general"
+  parentId     String?       // para respuestas
+  parent       Comentario?   @relation("Respuestas", fields: [parentId], references: [id], onDelete: Cascade)
+  respuestas   Comentario[]  @relation("Respuestas")
+  reacciones   Reaccion[]
+  createdAt    DateTime      @default(now())
+
+  @@index([tipo, refId])
+  @@index([email])
+  @@index([parentId])
+}
+
+model Reaccion {
+  id           String     @id @default(cuid())
+  email        String
+  tipo         String     @default("corazon") // "corazon" | "aplauso" | "fuego"
+  comentarioId String
+  comentario   Comentario @relation(fields: [comentarioId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([email, comentarioId])
+  @@index([comentarioId])
 }

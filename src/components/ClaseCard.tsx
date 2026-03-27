@@ -21,7 +21,7 @@ export function ClaseCard({
 }: ClaseCardProps) {
   return (
     <div className="card group overflow-hidden p-0">
-      <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-primary-100 to-primary-200">
+      <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-nude-100 to-nude-200">
         {imagen ? (
           <img
             src={imagen}
@@ -31,7 +31,7 @@ export function ClaseCard({
         ) : (
           <div className="flex h-full items-center justify-center">
             <svg
-              className="h-16 w-16 text-primary-300"
+              className="h-16 w-16 text-nude-400"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -51,7 +51,7 @@ export function ClaseCard({
             </svg>
           </div>
         )}
-        <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-primary-700 backdrop-blur-sm">
+        <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-gray-700 backdrop-blur-sm">
           {categoria}
         </span>
         {desbloqueada && (
@@ -67,12 +67,12 @@ export function ClaseCard({
           {descripcion}
         </p>
         <div className="flex items-center justify-between">
-          <span className="text-xl font-bold text-primary-600">
+          <span className="text-xl font-bold text-black">
             ${precio.toFixed(2)}
           </span>
           {desbloqueada ? (
             <Link href={`/clases/${id}`} className="btn-primary text-xs">
-              Ver Clase
+              Ver Curso
             </Link>
           ) : (
             <Link href="/desbloquear" className="btn-accent text-xs">

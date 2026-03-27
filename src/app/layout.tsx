@@ -4,8 +4,6 @@ import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { Providers } from "@/components/Providers";
 
-export const dynamic = "force-dynamic";
-
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
@@ -25,8 +23,8 @@ export default function RootLayout({
         <Providers>
           <Navbar />
           <main className="min-h-screen">{children}</main>
-          <footer className="border-t border-gray-200 bg-white py-8 text-center text-sm text-gray-500">
-            <p>&copy; 2025 Deby Chantell Coach Academy. Todos los derechos reservados.</p>
+          <footer className="border-t border-gray-100 bg-white py-8 text-center text-sm text-gray-400">
+            <p>&copy; 2026 Deby Chantell Coach Academy. Todos los derechos reservados.</p>
           </footer>
         </Providers>
       </body>

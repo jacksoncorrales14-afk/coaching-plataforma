@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ImageUpload } from "@/components/ImageUpload";
+import { ImagePositionEditor } from "@/components/ImagePositionEditor";
 
 export default function NuevaClasePage() {
   const { data: session, status } = useSession();
@@ -14,6 +15,7 @@ export default function NuevaClasePage() {
     descripcion: "",
     contenido: "",
     imagen: "",
+    imagenPos: "50% 50%",
     precio: 0,
     categoria: "General",
     publicada: false,
@@ -95,6 +97,11 @@ export default function NuevaClasePage() {
           value={form.imagen}
           onChange={(url) => setForm({ ...form, imagen: url })}
         />
+        <ImagePositionEditor
+          imageUrl={form.imagen}
+          position={form.imagenPos}
+          onChange={(pos) => setForm({ ...form, imagenPos: pos })}
+        />
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -139,7 +146,7 @@ export default function NuevaClasePage() {
             id="publicada"
             checked={form.publicada}
             onChange={(e) => setForm({ ...form, publicada: e.target.checked })}
-            className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            className="h-4 w-4 rounded border-gray-300 text-wine-600 focus:ring-wine-500"
           />
           <label htmlFor="publicada" className="text-sm text-gray-700">
             Publicar inmediatamente (visible para las clientas)
