@@ -44,7 +44,7 @@ interface ProgramaAdmin {
   descripcion: string;
   imagen: string;
   publicado: boolean;
-  niveles: { id: string; titulo: string; videos: { id: string }[] }[];
+  niveles: { id: string; titulo: string; videos: { id: string; titulo: string }[] }[];
 }
 
 interface Stats {
