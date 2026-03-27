@@ -32,6 +32,12 @@ export function Navbar() {
             Cursos
           </Link>
           <Link
+            href="/programas"
+            className="rounded-full border border-gray-200 bg-white px-5 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all hover:border-wine-300 hover:bg-wine-50 hover:text-wine-700 hover:shadow-md"
+          >
+            Programas
+          </Link>
+          <Link
             href="/membresia"
             className="rounded-full bg-wine-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-wine-700 hover:shadow-md"
           >
@@ -97,6 +103,13 @@ export function Navbar() {
               onClick={() => setMenuOpen(false)}
             >
               Cursos
+            </Link>
+            <Link
+              href="/programas"
+              className="rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
+              onClick={() => setMenuOpen(false)}
+            >
+              Programas
             </Link>
             <Link
               href="/membresia"

@@ -27,6 +27,7 @@ interface Programa {
   descripcion: string;
   imagen: string;
   imagenPos: string;
+  precio: number;
   publicado: boolean;
   niveles: Nivel[];
 }
@@ -40,6 +41,7 @@ export default function EditarProgramaPage() {
   const [descripcion, setDescripcion] = useState("");
   const [imagen, setImagen] = useState("");
   const [imagenPos, setImagenPos] = useState("50% 50%");
+  const [precio, setPrecio] = useState(0);
   const [publicado, setPublicado] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -69,6 +71,7 @@ export default function EditarProgramaPage() {
       setDescripcion(prog.descripcion);
       setImagen(prog.imagen);
       setImagenPos(prog.imagenPos || "50% 50%");
+      setPrecio(prog.precio || 0);
       setPublicado(prog.publicado);
     }
     setLoading(false);
@@ -103,7 +106,7 @@ export default function EditarProgramaPage() {
     await fetch("/api/admin/programas", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: programa.id, titulo, descripcion, imagen, imagenPos, publicado }),
+      body: JSON.stringify({ id: programa.id, titulo, descripcion, imagen, imagenPos, precio, publicado }),
     });
     setSaving(false);
     await cargarPrograma();
@@ -207,6 +210,19 @@ export default function EditarProgramaPage() {
           </div>
           <ImageUpload value={imagen} onChange={setImagen} />
           <ImagePositionEditor imageUrl={imagen} position={imagenPos} onChange={setImagenPos} />
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Precio ($) — para compra individual</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={precio}
+              onChange={(e) => setPrecio(parseFloat(e.target.value) || 0)}
+              className="input-field w-48"
+              placeholder="0.00"
+            />
+            <p className="mt-1 text-xs text-gray-400">Si es 0, solo estara disponible con membresia</p>
+          </div>
           <div className="flex items-center gap-3">
             <input
               type="checkbox"
@@ -216,7 +232,7 @@ export default function EditarProgramaPage() {
               className="h-4 w-4 rounded border-gray-300 text-wine-600 focus:ring-wine-500"
             />
             <label htmlFor="publicado" className="text-sm text-gray-700">
-              Publicado (visible para miembros)
+              Publicado (visible para miembros y compradores)
             </label>
           </div>
           <div className="flex items-center justify-between">

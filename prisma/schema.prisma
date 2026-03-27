@@ -87,16 +87,34 @@ model Membresia {
 // ─── PROGRAMAS POR NIVELES (solo membresía) ──────────────
 
 model Programa {
-  id          String   @id @default(cuid())
+  id          String           @id @default(cuid())
   titulo      String
-  descripcion String   @db.Text
-  imagen      String   @default("")
-  imagenPos   String   @default("50% 50%")
-  publicado   Boolean  @default(false)
-  orden       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  descripcion String           @db.Text
+  imagen      String           @default("")
+  imagenPos   String           @default("50% 50%")
+  precio      Float            @default(0)
+  publicado   Boolean          @default(false)
+  orden       Int              @default(0)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   niveles     Nivel[]
+  accesos     AccesoPrograma[]
+}
+
+model AccesoPrograma {
+  id          String   @id @default(cuid())
+  email       String
+  nombre      String
+  programaId  String
+  programa    Programa @relation(fields: [programaId], references: [id], onDelete: Cascade)
+  codigoId    String?  // código usado para desbloquear (opcional si es por membresía)
+  completado  Boolean  @default(false)
+  completadoAt DateTime?
+  createdAt   DateTime @default(now())
+
+  @@unique([email, programaId])
+  @@index([email])
+  @@index([programaId])
 }
 
 model Nivel {

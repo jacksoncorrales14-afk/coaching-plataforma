@@ -90,11 +90,11 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    const { id, titulo, descripcion, imagen, imagenPos, publicado } = await req.json();
+    const { id, titulo, descripcion, imagen, imagenPos, precio, publicado } = await req.json();
 
     const programa = await prisma.programa.update({
       where: { id },
-      data: { titulo, descripcion, imagen, imagenPos, publicado },
+      data: { titulo, descripcion, imagen, imagenPos, precio, publicado },
     });
 
     return NextResponse.json(programa);

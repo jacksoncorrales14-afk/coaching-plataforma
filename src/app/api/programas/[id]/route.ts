@@ -30,6 +30,22 @@ export async function GET(
       return NextResponse.json({ error: "Programa no encontrado" }, { status: 404 });
     }
 
+    // Verificar acceso: membresía activa O compra individual del programa
+    let tieneAcceso = false;
+    if (email) {
+      const emailNorm = email.trim().toLowerCase();
+
+      const membresia = await prisma.membresia.findFirst({
+        where: { email: emailNorm, estado: "activa", expiraAt: { gt: new Date() } },
+      });
+
+      const accesoPrograma = await prisma.accesoPrograma.findUnique({
+        where: { email_programaId: { email: emailNorm, programaId: params.id } },
+      });
+
+      tieneAcceso = !!membresia || !!accesoPrograma;
+    }
+
     // Obtener progreso del usuario si tiene email
     let progreso: Record<string, { visto: boolean; progreso: number }> = {};
     let tareasCompletadas: Set<string> = new Set();
@@ -86,7 +102,11 @@ export async function GET(
 
     return NextResponse.json({
       ...programa,
-      niveles: nivelesConEstado,
+      tieneAcceso,
+      niveles: tieneAcceso ? nivelesConEstado : nivelesConEstado.map((n: any) => ({
+        ...n,
+        videos: n.videos.map((v: any) => ({ ...v, url: "" })), // No exponer URLs si no tiene acceso
+      })),
     });
   } catch (error) {
     console.error(error);

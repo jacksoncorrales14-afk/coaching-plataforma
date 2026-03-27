@@ -38,6 +38,8 @@ interface Programa {
   descripcion: string;
   imagen: string;
   imagenPos: string;
+  precio: number;
+  tieneAcceso: boolean;
   niveles: Nivel[];
 }
 
@@ -126,6 +128,58 @@ export default function ProgramaPage() {
   const progresoTotal = programa.niveles.reduce((s, n) => s + n.videosVistos, 0);
   const totalVideos = programa.niveles.reduce((s, n) => s + n.totalVideos, 0);
   const porcentajeTotal = totalVideos > 0 ? Math.round((progresoTotal / totalVideos) * 100) : 0;
+
+  // Si no tiene acceso, mostrar paywall
+  if (!programa.tieneAcceso) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="relative overflow-hidden bg-wine-600 py-20">
+          <div className="absolute inset-0 bg-gradient-to-br from-wine-700/50 via-transparent to-wine-800/30" />
+          {programa.imagen && (
+            <img src={programa.imagen} alt="" className="absolute inset-0 h-full w-full object-cover opacity-20" style={{ objectPosition: programa.imagenPos }} />
+          )}
+          <div className="relative mx-auto max-w-3xl px-4 text-center sm:px-6">
+            <Link href="/programas" className="mb-4 inline-block text-sm text-wine-200 hover:text-white">
+              &larr; Volver a programas
+            </Link>
+            <h1 className="mb-4 text-3xl font-bold text-white">{programa.titulo}</h1>
+            <p className="mb-6 text-wine-100">{programa.descripcion}</p>
+            <p className="mb-2 text-sm text-white/60">{programa.niveles.length} niveles · {totalVideos} videos</p>
+          </div>
+        </div>
+        <div className="mx-auto -mt-8 max-w-lg px-4 sm:px-6">
+          <div className="rounded-2xl bg-white p-8 text-center shadow-xl">
+            <svg className="mx-auto mb-4 h-12 w-12 text-wine-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <h2 className="mb-2 text-xl font-bold text-gray-900">Acceso requerido</h2>
+            <p className="mb-6 text-sm text-gray-500">
+              Necesitas comprar este programa o tener una membresia activa para acceder al contenido.
+            </p>
+            {programa.precio > 0 && (
+              <div className="mb-4">
+                <span className="text-3xl font-extrabold text-gray-900">${programa.precio.toFixed(2)}</span>
+                <p className="text-xs text-gray-400">Acceso completo al programa</p>
+              </div>
+            )}
+            <div className="flex flex-col gap-3">
+              {programa.precio > 0 && (
+                <button
+                  onClick={() => alert(`Proximamente: Pago con Stripe por $${programa.precio.toFixed(2)}`)}
+                  className="btn-primary w-full py-3"
+                >
+                  Comprar programa
+                </button>
+              )}
+              <Link href="/membresia" className="btn-secondary w-full py-3 text-center">
+                Ver membresia (incluye todo)
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
