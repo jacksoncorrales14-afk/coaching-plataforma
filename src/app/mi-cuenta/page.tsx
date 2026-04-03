@@ -32,6 +32,12 @@ export default function MiCuentaPage() {
   const [accesos, setAccesos] = useState<AccesoInfo[]>([]);
   const [membresia, setMembresia] = useState<MembresiaInfo | null>(null);
 
+  // Recuperar codigo
+  const [showRecuperar, setShowRecuperar] = useState(false);
+  const [emailRecuperar, setEmailRecuperar] = useState("");
+  const [recuperando, setRecuperando] = useState(false);
+  const [recuperarMsg, setRecuperarMsg] = useState("");
+
   // Verificar si ya tiene sesión guardada
   useEffect(() => {
     const savedEmail = localStorage.getItem("coach_email");
@@ -175,7 +181,71 @@ export default function MiCuentaPage() {
               </button>
             </form>
 
-            <div className="mt-6 text-center">
+            {/* Olvide mi codigo */}
+            <div className="mt-5 border-t border-gray-100 pt-5">
+              {!showRecuperar ? (
+                <button
+                  type="button"
+                  onClick={() => setShowRecuperar(true)}
+                  className="w-full text-center text-sm font-medium text-wine-600 transition-colors hover:text-wine-700"
+                >
+                  Olvide mi codigo
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-center text-sm text-gray-500">
+                    Ingresa tu correo y te enviaremos tus codigos activos
+                  </p>
+                  {recuperarMsg && (
+                    <div className="rounded-xl bg-green-50 p-3 text-center text-sm text-green-700">
+                      {recuperarMsg}
+                    </div>
+                  )}
+                  <input
+                    type="email"
+                    value={emailRecuperar}
+                    onChange={(e) => setEmailRecuperar(e.target.value)}
+                    className="input-field"
+                    placeholder="tu@email.com"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!emailRecuperar.trim()) return;
+                        setRecuperando(true);
+                        setRecuperarMsg("");
+                        try {
+                          const res = await fetch("/api/recuperar-codigo", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ email: emailRecuperar.trim() }),
+                          });
+                          const data = await res.json();
+                          setRecuperarMsg(data.mensaje || "Revisa tu correo electronico.");
+                        } catch {
+                          setRecuperarMsg("Error al enviar. Intenta de nuevo.");
+                        }
+                        setRecuperando(false);
+                      }}
+                      disabled={recuperando || !emailRecuperar.trim()}
+                      className="btn-primary flex-1 py-2.5 text-sm"
+                    >
+                      {recuperando ? "Enviando..." : "Enviar a mi correo"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setShowRecuperar(false); setRecuperarMsg(""); }}
+                      className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-gray-500 transition-colors hover:bg-gray-50"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 text-center">
               <p className="text-xs text-gray-400">
                 ¿Aun no tienes un codigo?{" "}
                 <Link href="/clases" className="text-wine-600 hover:underline">

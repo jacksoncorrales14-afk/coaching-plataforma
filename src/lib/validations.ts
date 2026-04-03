@@ -197,3 +197,8 @@ export const verificarCodigoSchema = z.object({
 export const recuperarPasswordSchema = z.object({
   email: email,
 });
+
+// --- Recuperar codigo ---
+export const recuperarCodigoSchema = z.object({
+  email: email,
+});
