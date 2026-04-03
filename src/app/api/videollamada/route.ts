@@ -78,8 +78,25 @@ export async function POST(req: NextRequest) {
         email: data.email,
         nombre: data.nombre.trim(),
         mensaje: data.mensaje,
+        fechaPropuesta: new Date(data.fechaPropuesta),
+        estado: "pendiente_pago",
       },
     });
+
+    // Crear notificación para admin
+    const fechaStr = new Date(data.fechaPropuesta).toLocaleDateString("es", {
+      day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+    });
+    try {
+      await prisma.notificacion.create({
+        data: {
+          tipo: "solicitud_videollamada",
+          mensaje: `${data.nombre.trim()} solicita videollamada para ${fechaStr}`,
+          enlace: `/admin?seccion=videollamadas`,
+          metadata: JSON.stringify({ email: data.email, videollamadaId: videollamada.id }),
+        },
+      });
+    } catch { /* no bloquear si falla la notificación */ }
 
     return NextResponse.json(videollamada, { status: 201 });
   } catch (error) {

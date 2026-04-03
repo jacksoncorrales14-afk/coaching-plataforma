@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface Videollamada {
   id: string;
@@ -16,6 +16,11 @@ interface Videollamada {
   createdAt: string;
 }
 
+interface DisponibilidadDia {
+  fecha: string;
+  horas: string[];
+}
+
 interface VideollamadaTabProps {
   email: string;
   nombre: string;
@@ -27,12 +32,51 @@ interface VideollamadaTabProps {
 
 const estadoLabel: Record<string, { text: string; color: string }> = {
   pendiente_pago: { text: "Pendiente de pago", color: "bg-yellow-100 text-yellow-700" },
-  pagada: { text: "Pagada - Propón tu horario", color: "bg-blue-100 text-blue-700" },
+  pagada: { text: "Pagada - Esperando confirmación", color: "bg-blue-100 text-blue-700" },
   agendada: { text: "Horario propuesto - Esperando confirmación", color: "bg-purple-100 text-purple-700" },
   confirmada: { text: "Confirmada", color: "bg-green-100 text-green-700" },
   completada: { text: "Completada", color: "bg-gray-100 text-gray-600" },
   cancelada: { text: "Cancelada", color: "bg-red-100 text-red-600" },
 };
+
+const DIAS_SEMANA = ["L", "M", "M", "J", "V", "S", "D"];
+
+function getMesNombre(mes: number): string {
+  const nombres = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+  ];
+  return nombres[mes];
+}
+
+function formatFecha(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Build an array of day cells for the calendar grid.
+ * Each cell is either { date: Date, fechaStr: string } or null (empty padding).
+ */
+function buildCalendarDays(year: number, month: number): (null | { date: Date; fechaStr: string })[] {
+  const firstDay = new Date(year, month, 1);
+  // JS getDay: 0=Sun..6=Sat  ->  We want Mon=0..Sun=6
+  let startOffset = firstDay.getDay() - 1;
+  if (startOffset < 0) startOffset = 6;
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: (null | { date: Date; fechaStr: string })[] = [];
+
+  for (let i = 0; i < startOffset; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(year, month, d);
+    cells.push({ date, fechaStr: formatFecha(date) });
+  }
+
+  return cells;
+}
 
 export function VideollamadaTab({
   email,
@@ -42,11 +86,48 @@ export function VideollamadaTab({
   precio,
   activa,
 }: VideollamadaTabProps) {
-  const [solicitando, setSolicitando] = useState(false);
+  const [disponibilidad, setDisponibilidad] = useState<DisponibilidadDia[]>([]);
+  const [cargandoDisp, setCargandoDisp] = useState(true);
+  const [mesOffset, setMesOffset] = useState(0); // 0 = current month, 1 = next month
+  const [fechaSeleccionada, setFechaSeleccionada] = useState<string | null>(null);
+  const [horaSeleccionada, setHoraSeleccionada] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState("");
-  const [fechaPropuesta, setFechaPropuesta] = useState("");
-  const [mensajePropuesta, setMensajePropuesta] = useState("");
-  const [enviando, setEnviando] = useState(false);
+  const [solicitando, setSolicitando] = useState(false);
+
+  // Fetch availability on mount
+  useEffect(() => {
+    async function fetchDisponibilidad() {
+      setCargandoDisp(true);
+      try {
+        const res = await fetch("/api/disponibilidad");
+        if (res.ok) {
+          const data: DisponibilidadDia[] = await res.json();
+          setDisponibilidad(data);
+        }
+      } catch {
+        // silently fail
+      }
+      setCargandoDisp(false);
+    }
+    fetchDisponibilidad();
+  }, []);
+
+  // Derived data
+  const hoy = new Date();
+  const hoyStr = formatFecha(hoy);
+
+  const disponibilidadMap = new Map<string, string[]>();
+  for (const d of disponibilidad) {
+    disponibilidadMap.set(d.fecha, d.horas);
+  }
+
+  const horasDelDia = fechaSeleccionada ? disponibilidadMap.get(fechaSeleccionada) || [] : [];
+
+  // Calendar month computation
+  const calendarDate = new Date(hoy.getFullYear(), hoy.getMonth() + mesOffset, 1);
+  const calendarYear = calendarDate.getFullYear();
+  const calendarMonth = calendarDate.getMonth();
+  const cells = buildCalendarDays(calendarYear, calendarMonth);
 
   // Solicitud activa (no completada ni cancelada)
   const solicitudActiva = videollamadas.find(
@@ -59,41 +140,32 @@ export function VideollamadaTab({
   );
 
   const handleSolicitar = async () => {
+    if (!fechaSeleccionada || !horaSeleccionada) return;
     setSolicitando(true);
-    const res = await fetch("/api/videollamada", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, nombre, mensaje }),
-    });
-    if (res.ok) {
-      const nueva = await res.json();
-      setVideollamadas((prev) => [nueva, ...prev]);
-      setMensaje("");
+    try {
+      const fechaPropuesta = `${fechaSeleccionada}T${horaSeleccionada}:00`;
+      const res = await fetch("/api/videollamada", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, nombre, mensaje, fechaPropuesta }),
+      });
+      if (res.ok) {
+        const nueva = await res.json();
+        setVideollamadas((prev) => [nueva, ...prev]);
+        setMensaje("");
+        setFechaSeleccionada(null);
+        setHoraSeleccionada(null);
+      }
+    } catch {
+      // silently fail
     }
     setSolicitando(false);
   };
 
-  const handleProponerFecha = async (id: string) => {
-    if (!fechaPropuesta) return;
-    setEnviando(true);
-    const res = await fetch(`/api/videollamada/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        fechaPropuesta,
-        mensaje: mensajePropuesta,
-      }),
-    });
-    if (res.ok) {
-      const updated = await res.json();
-      setVideollamadas((prev) =>
-        prev.map((v) => (v.id === id ? updated : v))
-      );
-      setFechaPropuesta("");
-      setMensajePropuesta("");
-    }
-    setEnviando(false);
-  };
+  // Can navigate previous month only if it's current month or later
+  const canGoPrev = mesOffset > 0;
+  // Limit to ~2 months ahead
+  const canGoNext = mesOffset < 2;
 
   if (!activa) {
     return (
@@ -134,52 +206,41 @@ export function VideollamadaTab({
                   <p className="text-sm font-medium text-yellow-800">Esperando confirmación de pago</p>
                   <p className="mt-1 text-xs text-yellow-600">
                     Tu solicitud fue recibida. Una vez confirmado el pago de ${precio.toFixed(2)},
-                    podrás proponer tu horario preferido.
+                    se agendará tu videollamada.
                   </p>
+                  {solicitudActiva.fechaPropuesta && (
+                    <p className="mt-2 text-xs font-medium text-yellow-700">
+                      Horario solicitado:{" "}
+                      {new Date(solicitudActiva.fechaPropuesta).toLocaleString("es", {
+                        weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+                      })}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
           )}
 
-          {/* Estado: pagada - proponer fecha */}
+          {/* Estado: pagada */}
           {solicitudActiva.estado === "pagada" && (
-            <div className="space-y-4">
-              <div className="rounded-xl bg-blue-50 p-4">
-                <p className="text-sm font-medium text-blue-800">
-                  ¡Pago confirmado! Ahora propón tu fecha y hora preferida.
-                </p>
+            <div className="rounded-xl bg-blue-50 p-4">
+              <div className="flex items-start gap-3">
+                <svg className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-blue-800">Pago confirmado - Esperando confirmación de la coach</p>
+                  {solicitudActiva.fechaPropuesta && (
+                    <p className="mt-1 text-sm text-blue-600">
+                      Horario solicitado:{" "}
+                      {new Date(solicitudActiva.fechaPropuesta).toLocaleString("es", {
+                        weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+                      })}
+                    </p>
+                  )}
+                  <p className="mt-1 text-xs text-blue-500">La coach confirmará tu horario pronto.</p>
+                </div>
               </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Fecha y hora propuesta
-                </label>
-                <input
-                  type="datetime-local"
-                  value={fechaPropuesta}
-                  onChange={(e) => setFechaPropuesta(e.target.value)}
-                  className="input-field"
-                  min={new Date(Date.now() + 86400000).toISOString().slice(0, 16)}
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Mensaje para la coach (opcional)
-                </label>
-                <textarea
-                  value={mensajePropuesta}
-                  onChange={(e) => setMensajePropuesta(e.target.value)}
-                  className="input-field resize-none"
-                  rows={3}
-                  placeholder="Cuéntale sobre qué te gustaría hablar..."
-                />
-              </div>
-              <button
-                onClick={() => handleProponerFecha(solicitudActiva.id)}
-                disabled={enviando || !fechaPropuesta}
-                className="btn-primary w-full py-3"
-              >
-                {enviando ? "Enviando..." : "Proponer horario"}
-              </button>
             </div>
           )}
 
@@ -193,8 +254,9 @@ export function VideollamadaTab({
                 <div>
                   <p className="text-sm font-medium text-purple-800">Horario propuesto, esperando confirmación</p>
                   <p className="mt-1 text-sm text-purple-600">
-                    Propusiste: {new Date(solicitudActiva.fechaPropuesta!).toLocaleString("es", {
-                      weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit"
+                    Propusiste:{" "}
+                    {new Date(solicitudActiva.fechaPropuesta!).toLocaleString("es", {
+                      weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
                     })}
                   </p>
                   <p className="mt-1 text-xs text-purple-500">La coach confirmará tu horario pronto.</p>
@@ -217,13 +279,13 @@ export function VideollamadaTab({
                   <p>
                     <strong>Fecha:</strong>{" "}
                     {new Date(solicitudActiva.fechaConfirmada!).toLocaleDateString("es", {
-                      weekday: "long", day: "numeric", month: "long", year: "numeric"
+                      weekday: "long", day: "numeric", month: "long", year: "numeric",
                     })}
                   </p>
                   <p>
                     <strong>Hora:</strong>{" "}
                     {new Date(solicitudActiva.fechaConfirmada!).toLocaleTimeString("es", {
-                      hour: "2-digit", minute: "2-digit"
+                      hour: "2-digit", minute: "2-digit",
                     })}
                   </p>
                   <p><strong>Duración:</strong> {solicitudActiva.duracion} minutos</p>
@@ -246,36 +308,183 @@ export function VideollamadaTab({
           )}
         </div>
       ) : (
-        /* No tiene solicitud activa - mostrar CTA */
-        <div className="mb-8 rounded-2xl bg-white p-8 text-center shadow-sm">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-wine-50">
-            <svg className="h-8 w-8 text-wine-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
+        /* No tiene solicitud activa - Mostrar calendario para agendar */
+        <div className="mb-8 rounded-2xl bg-white p-6 shadow-sm">
+          {/* Header */}
+          <div className="mb-4 text-center">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-wine-50">
+              <svg className="h-7 w-7 text-wine-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-gray-900">Agenda tu sesión</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Selecciona una fecha y hora disponible para tu videollamada
+            </p>
+            <p className="mt-2 text-2xl font-extrabold text-wine-600">${precio.toFixed(2)}</p>
           </div>
-          <h3 className="mb-2 text-lg font-bold text-gray-900">Sesión personalizada</h3>
-          <p className="mb-2 text-sm text-gray-500">
-            Reserva una videollamada privada con la coach para resolver tus dudas,
-            revisar tu estrategia o recibir mentoría personalizada.
-          </p>
-          <p className="mb-6 text-2xl font-extrabold text-wine-600">${precio.toFixed(2)}</p>
 
-          <div className="mx-auto max-w-sm space-y-3">
-            <textarea
-              value={mensaje}
-              onChange={(e) => setMensaje(e.target.value)}
-              className="input-field resize-none"
-              rows={2}
-              placeholder="¿Sobre qué te gustaría hablar? (opcional)"
-            />
-            <button
-              onClick={handleSolicitar}
-              disabled={solicitando}
-              className="btn-primary w-full py-3"
-            >
-              {solicitando ? "Solicitando..." : "Solicitar videollamada"}
-            </button>
-          </div>
+          {cargandoDisp ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-wine-200 border-t-wine-600" />
+            </div>
+          ) : (
+            <>
+              {/* Calendar */}
+              <div className="mx-auto max-w-sm">
+                {/* Month navigation */}
+                <div className="mb-3 flex items-center justify-between">
+                  <button
+                    onClick={() => {
+                      setMesOffset((o) => o - 1);
+                      setFechaSeleccionada(null);
+                      setHoraSeleccionada(null);
+                    }}
+                    disabled={!canGoPrev}
+                    className="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                    aria-label="Mes anterior"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {getMesNombre(calendarMonth)} {calendarYear}
+                  </span>
+                  <button
+                    onClick={() => {
+                      setMesOffset((o) => o + 1);
+                      setFechaSeleccionada(null);
+                      setHoraSeleccionada(null);
+                    }}
+                    disabled={!canGoNext}
+                    className="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                    aria-label="Mes siguiente"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Day-of-week header */}
+                <div className="mb-1 grid grid-cols-7 text-center">
+                  {DIAS_SEMANA.map((d, i) => (
+                    <span key={i} className="py-1 text-xs font-medium text-gray-400">
+                      {d}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Day grid */}
+                <div className="grid grid-cols-7 gap-1">
+                  {cells.map((cell, i) => {
+                    if (!cell) {
+                      return <div key={`empty-${i}`} />;
+                    }
+
+                    const isPast = cell.fechaStr < hoyStr;
+                    const isAvailable = !isPast && disponibilidadMap.has(cell.fechaStr);
+                    const isSelected = cell.fechaStr === fechaSeleccionada;
+                    const isToday = cell.fechaStr === hoyStr;
+
+                    return (
+                      <button
+                        key={cell.fechaStr}
+                        disabled={!isAvailable}
+                        onClick={() => {
+                          setFechaSeleccionada(cell.fechaStr);
+                          setHoraSeleccionada(null);
+                        }}
+                        className={`
+                          flex h-9 w-full items-center justify-center rounded-lg text-sm transition
+                          ${isSelected
+                            ? "bg-wine-600 font-semibold text-white"
+                            : isAvailable
+                              ? "bg-white font-medium text-gray-900 hover:bg-wine-50"
+                              : "cursor-default text-gray-300"
+                          }
+                          ${isToday && !isSelected ? "ring-1 ring-wine-300" : ""}
+                        `}
+                      >
+                        {cell.date.getDate()}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Hour selection */}
+              {fechaSeleccionada && (
+                <div className="mx-auto mt-6 max-w-sm">
+                  <p className="mb-3 text-center text-sm font-medium text-gray-700">
+                    Horarios disponibles para el{" "}
+                    <span className="font-semibold text-wine-600">
+                      {new Date(fechaSeleccionada + "T00:00:00").toLocaleDateString("es", {
+                        day: "numeric",
+                        month: "long",
+                      })}
+                    </span>
+                  </p>
+                  {horasDelDia.length > 0 ? (
+                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                      {horasDelDia.map((hora) => {
+                        const isSelected = hora === horaSeleccionada;
+                        return (
+                          <button
+                            key={hora}
+                            onClick={() => setHoraSeleccionada(hora)}
+                            className={`
+                              rounded-full px-3 py-2 text-sm font-medium transition
+                              ${isSelected
+                                ? "bg-wine-600 text-white"
+                                : "bg-gray-100 text-gray-700 hover:bg-wine-50 hover:text-wine-700"
+                              }
+                            `}
+                          >
+                            {hora}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-center text-sm text-gray-400">No hay horarios disponibles para este día.</p>
+                  )}
+                </div>
+              )}
+
+              {/* Message + submit */}
+              {horaSeleccionada && (
+                <div className="mx-auto mt-6 max-w-sm space-y-3">
+                  <div className="rounded-xl bg-wine-50 p-3 text-center">
+                    <p className="text-sm font-medium text-wine-700">
+                      {new Date(`${fechaSeleccionada}T${horaSeleccionada}:00`).toLocaleString("es", {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </div>
+                  <textarea
+                    value={mensaje}
+                    onChange={(e) => setMensaje(e.target.value)}
+                    className="input-field resize-none"
+                    rows={2}
+                    placeholder="¿Sobre qué te gustaría hablar? (opcional)"
+                  />
+                  <button
+                    onClick={handleSolicitar}
+                    disabled={solicitando}
+                    className="btn-primary w-full py-3"
+                  >
+                    {solicitando ? "Solicitando..." : "Solicitar videollamada"}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
 

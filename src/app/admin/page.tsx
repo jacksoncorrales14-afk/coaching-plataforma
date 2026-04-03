@@ -73,10 +73,15 @@ export default function AdminPage() {
   const [programas, setProgramas] = useState<ProgramaAdmin[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [videollamadas, setVideollamadas] = useState<any[]>([]);
+  const [bloques, setBloques] = useState<any[]>([]);
   const [configPrecio, setConfigPrecio] = useState(50);
   const [configActiva, setConfigActiva] = useState(true);
   const [editandoPrecio, setEditandoPrecio] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [horarioSemanal, setHorarioSemanal] = useState(
+    Array.from({ length: 7 }, () => ({ horaInicio: "09:00", horaFin: "17:00" }))
+  );
+  const [fechaBloqueo, setFechaBloqueo] = useState("");
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -92,13 +97,15 @@ export default function AdminPage() {
         fetch("/api/admin/programas").then(r => r.json()),
         fetch("/api/admin/videollamadas").then(r => r.ok ? r.json() : []),
         fetch("/api/admin/config").then(r => r.ok ? r.json() : { precioVideollamada: 50, videollamadaActiva: true }),
-      ]).then(([clasesData, memData, statsData, comData, progData, videoData, configData]) => {
+        fetch("/api/admin/disponibilidad").then(r => r.ok ? r.json() : []),
+      ]).then(([clasesData, memData, statsData, comData, progData, videoData, configData, bloquesData]) => {
         setClases(clasesData);
         setMembresias(Array.isArray(memData) ? memData : []);
         setStats(statsData);
         setComentarios(Array.isArray(comData) ? comData : []);
         setProgramas(Array.isArray(progData) ? progData : []);
         setVideollamadas(Array.isArray(videoData) ? videoData : []);
+        setBloques(Array.isArray(bloquesData) ? bloquesData : []);
         setConfigPrecio(configData.precioVideollamada ?? 50);
         setConfigActiva(configData.videollamadaActiva ?? true);
         setLoading(false);
@@ -644,6 +651,150 @@ export default function AdminPage() {
                     {configActiva ? "Activa" : "Inactiva"}
                   </span>
                 </div>
+              </div>
+            </div>
+
+            {/* Disponibilidad */}
+            <div className="mb-8 rounded-2xl bg-white p-6 shadow-sm">
+              <h2 className="mb-4 text-lg font-bold text-gray-900">Horarios de disponibilidad</h2>
+
+              {/* Horario semanal */}
+              <div className="mb-6">
+                <h3 className="mb-3 text-sm font-semibold text-gray-700">Horario semanal</h3>
+                <div className="space-y-2">
+                  {["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"].map((dia, i) => (
+                    <div key={i} className="flex flex-wrap items-center gap-3 rounded-xl bg-gray-50 px-4 py-2.5">
+                      <span className="w-24 text-sm font-medium text-gray-700">{dia}</span>
+                      <div className="flex items-center gap-2">
+                        <label className="text-[11px] text-gray-500">Inicio</label>
+                        <input
+                          type="time"
+                          value={horarioSemanal[i].horaInicio}
+                          onChange={e => {
+                            const nuevo = [...horarioSemanal];
+                            nuevo[i] = { ...nuevo[i], horaInicio: e.target.value };
+                            setHorarioSemanal(nuevo);
+                          }}
+                          className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm focus:border-wine-400 focus:outline-none focus:ring-1 focus:ring-wine-400"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-[11px] text-gray-500">Fin</label>
+                        <input
+                          type="time"
+                          value={horarioSemanal[i].horaFin}
+                          onChange={e => {
+                            const nuevo = [...horarioSemanal];
+                            nuevo[i] = { ...nuevo[i], horaFin: e.target.value };
+                            setHorarioSemanal(nuevo);
+                          }}
+                          className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm focus:border-wine-400 focus:outline-none focus:ring-1 focus:ring-wine-400"
+                        />
+                      </div>
+                      <button
+                        onClick={async () => {
+                          const res = await fetch("/api/admin/disponibilidad", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              diaSemana: i,
+                              horaInicio: horarioSemanal[i].horaInicio,
+                              horaFin: horarioSemanal[i].horaFin,
+                              disponible: true,
+                            }),
+                          });
+                          if (res.ok) {
+                            const nuevo = await res.json();
+                            setBloques(prev => [...prev, nuevo]);
+                          }
+                        }}
+                        className="rounded-lg bg-wine-600 px-3 py-1.5 text-xs font-medium text-white transition-all hover:bg-wine-700"
+                      >
+                        Guardar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Bloquear fecha específica */}
+              <div className="mb-6">
+                <h3 className="mb-3 text-sm font-semibold text-gray-700">Bloquear fecha especifica</h3>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="date"
+                    value={fechaBloqueo}
+                    onChange={e => setFechaBloqueo(e.target.value)}
+                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-wine-400 focus:outline-none focus:ring-1 focus:ring-wine-400"
+                  />
+                  <button
+                    onClick={async () => {
+                      if (!fechaBloqueo) return;
+                      const res = await fetch("/api/admin/disponibilidad", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          diaSemana: -1,
+                          horaInicio: "00:00",
+                          horaFin: "23:59",
+                          disponible: false,
+                          fechaEspecifica: fechaBloqueo,
+                        }),
+                      });
+                      if (res.ok) {
+                        const nuevo = await res.json();
+                        setBloques(prev => [...prev, nuevo]);
+                        setFechaBloqueo("");
+                      }
+                    }}
+                    className="rounded-lg bg-red-600 px-4 py-1.5 text-xs font-medium text-white transition-all hover:bg-red-700"
+                  >
+                    Bloquear
+                  </button>
+                </div>
+              </div>
+
+              {/* Lista de bloques configurados */}
+              <div>
+                <h3 className="mb-3 text-sm font-semibold text-gray-700">Bloques configurados</h3>
+                {bloques.length === 0 ? (
+                  <p className="text-sm text-gray-400">No hay bloques configurados.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {bloques.map(b => {
+                      const diasNombres = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
+                      const esBloqueoDia = b.diaSemana === -1;
+                      const texto = esBloqueoDia
+                        ? `${new Date(b.fechaEspecifica + "T00:00:00").toLocaleDateString("es", { day: "numeric", month: "short", year: "numeric" })} (Bloqueado)`
+                        : `${diasNombres[b.diaSemana]} ${b.horaInicio}-${b.horaFin} (Disponible)`;
+                      return (
+                        <div key={b.id} className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-2.5">
+                          <span className={`text-sm ${esBloqueoDia ? "text-red-600 font-medium" : "text-gray-700"}`}>
+                            {texto}
+                          </span>
+                          <button
+                            onClick={async () => {
+                              const res = await fetch("/api/admin/disponibilidad", {
+                                method: "DELETE",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ id: b.id }),
+                              });
+                              if (res.ok) {
+                                setBloques(prev => prev.filter(x => x.id !== b.id));
+                              }
+                            }}
+                            className="rounded-lg p-1.5 text-gray-400 transition-all hover:bg-red-50 hover:text-red-500"
+                            title="Eliminar"
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 

@@ -208,6 +208,7 @@ export const crearVideollamadaSchema = z.object({
   email: email,
   nombre: nonEmpty,
   mensaje: z.string().optional().default(""),
+  fechaPropuesta: z.string().min(1, "Fecha requerida"),
 });
 
 export const proponerFechaSchema = z.object({
@@ -226,4 +227,19 @@ export const adminVideollamadaSchema = z.object({
 export const configPlataformaSchema = z.object({
   precioVideollamada: z.number().min(0).optional(),
   videollamadaActiva: z.boolean().optional(),
+});
+
+// --- Disponibilidad ---
+export const bloqueHorarioSchema = z.object({
+  diaSemana: z.number().int().min(-1).max(6),
+  horaInicio: z.string().min(1),
+  horaFin: z.string().min(1),
+  disponible: z.boolean().optional().default(true),
+  fechaEspecifica: z.string().nullable().optional().default(null),
+});
+
+// --- Notificaciones ---
+export const marcarLeidaSchema = z.object({
+  id: z.string().optional(),
+  todas: z.boolean().optional().default(false),
 });

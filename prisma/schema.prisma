@@ -290,3 +290,35 @@ model ConfigPlataforma {
   precioVideollamada  Float   @default(50)
   videollamadaActiva  Boolean @default(true)
 }
+
+// ─── DISPONIBILIDAD DE LA COACH ─────────────────────────
+
+model BloqueHorario {
+  id              String    @id @default(cuid())
+  diaSemana       Int       // 0=domingo..6=sábado, -1=fecha específica
+  horaInicio      String    // "09:00"
+  horaFin         String    // "17:00"
+  disponible      Boolean   @default(true) // true=disponible, false=bloqueado
+  fechaEspecifica DateTime? // para bloquear/habilitar una fecha puntual
+  createdAt       DateTime  @default(now())
+}
+
+// ─── NOTIFICACIONES ADMIN ───────────────────────────────
+
+enum NotificacionTipo {
+  comentario_comunidad
+  comentario_programa
+  solicitud_videollamada
+}
+
+model Notificacion {
+  id        String           @id @default(cuid())
+  tipo      NotificacionTipo
+  mensaje   String
+  enlace    String           @default("")
+  leida     Boolean          @default(false)
+  metadata  String           @default("") @db.Text
+  createdAt DateTime         @default(now())
+
+  @@index([leida])
+}

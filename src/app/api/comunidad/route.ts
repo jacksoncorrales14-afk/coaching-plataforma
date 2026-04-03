@@ -71,6 +71,20 @@ export async function POST(req: NextRequest) {
       include: { reacciones: true, respuestas: { include: { reacciones: true } } },
     });
 
+    // Crear notificación para admin
+    const notiTipo = data.tipo === "programa" ? "comentario_programa" : "comentario_comunidad";
+    const preview = data.contenido.trim().slice(0, 80);
+    try {
+      await prisma.notificacion.create({
+        data: {
+          tipo: notiTipo as any,
+          mensaje: `${data.nombre.trim()}: "${preview}${data.contenido.length > 80 ? "..." : ""}"`,
+          enlace: data.tipo === "programa" ? `/admin?seccion=comunidad` : `/admin?seccion=comunidad`,
+          metadata: JSON.stringify({ email: data.email, tipo: data.tipo, refId: data.refId }),
+        },
+      });
+    } catch { /* no bloquear si falla la notificación */ }
+
     return NextResponse.json(comentario, { status: 201 });
   } catch (error) {
     console.error(error);
