@@ -9,7 +9,18 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Deby Chantell Coach Academy",
   description:
-    "Aprende marketing digital con clases y capacitaciones exclusivas",
+    "Aprende marketing digital con cursos y programas exclusivos",
+  manifest: "/manifest.json",
+  themeColor: "#722F37",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Coach Academy",
+  },
+  icons: {
+    icon: "/icon-192.png",
+    apple: "/icon-512.png",
+  },
 };
 
 export default function RootLayout({
