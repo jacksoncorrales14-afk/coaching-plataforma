@@ -218,7 +218,7 @@ export const proponerFechaSchema = z.object({
 
 export const adminVideollamadaSchema = z.object({
   id: nonEmpty,
-  accion: z.enum(["marcar_pagada", "confirmar", "completar", "cancelar"]),
+  accion: z.enum(["confirmar", "completar", "cancelar"]),
   fechaConfirmada: z.string().optional(),
   enlace: z.string().optional(),
   notasAdmin: z.string().optional(),

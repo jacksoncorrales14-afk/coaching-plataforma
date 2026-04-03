@@ -38,37 +38,40 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "No encontrada" }, { status: 404 });
     }
 
-    if (data.accion === "marcar_pagada") {
-      const updated = await prisma.videollamada.update({
-        where: { id: data.id },
-        data: { estado: "pagada" },
-      });
-      return NextResponse.json(updated);
-    }
-
     if (data.accion === "confirmar") {
-      if (!data.fechaConfirmada || !data.enlace) {
+      // Confirmar pago + agregar enlace → confirmada directamente
+      // La fecha ya fue elegida por la estudiante al solicitar
+      if (!data.enlace) {
         return NextResponse.json(
-          { error: "Fecha confirmada y enlace son requeridos" },
+          { error: "El enlace de la reunión es requerido" },
           { status: 400 }
         );
       }
+
+      const fechaConfirmada = videollamada.fechaPropuesta || (data.fechaConfirmada ? new Date(data.fechaConfirmada) : null);
+      if (!fechaConfirmada) {
+        return NextResponse.json(
+          { error: "No hay fecha propuesta para confirmar" },
+          { status: 400 }
+        );
+      }
+
       const updated = await prisma.videollamada.update({
         where: { id: data.id },
         data: {
           estado: "confirmada",
-          fechaConfirmada: new Date(data.fechaConfirmada),
+          fechaConfirmada: new Date(fechaConfirmada),
           enlace: data.enlace,
           notasAdmin: data.notasAdmin || "",
         },
       });
 
-      // Enviar email de confirmación
+      // Enviar email de confirmación a la estudiante
       try {
         await enviarConfirmacionVideollamada(
           videollamada.email,
           videollamada.nombre,
-          new Date(data.fechaConfirmada),
+          new Date(fechaConfirmada),
           data.enlace,
           videollamada.duracion
         );

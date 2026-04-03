@@ -31,9 +31,9 @@ interface VideollamadaTabProps {
 }
 
 const estadoLabel: Record<string, { text: string; color: string }> = {
-  pendiente_pago: { text: "Pendiente de pago", color: "bg-yellow-100 text-yellow-700" },
-  pagada: { text: "Pagada - Esperando confirmación", color: "bg-blue-100 text-blue-700" },
-  agendada: { text: "Horario propuesto - Esperando confirmación", color: "bg-purple-100 text-purple-700" },
+  pendiente_pago: { text: "Esperando confirmación de la coach", color: "bg-yellow-100 text-yellow-700" },
+  pagada: { text: "Esperando confirmación de la coach", color: "bg-blue-100 text-blue-700" },
+  agendada: { text: "Esperando confirmación de la coach", color: "bg-purple-100 text-purple-700" },
   confirmada: { text: "Confirmada", color: "bg-green-100 text-green-700" },
   completada: { text: "Completada", color: "bg-gray-100 text-gray-600" },
   cancelada: { text: "Cancelada", color: "bg-red-100 text-red-600" },
@@ -202,71 +202,29 @@ export function VideollamadaTab({
             </span>
           </div>
 
-          {/* Estado: pendiente_pago */}
-          {solicitudActiva.estado === "pendiente_pago" && (
+          {/* Estados pendientes (pendiente_pago, pagada, agendada) */}
+          {["pendiente_pago", "pagada", "agendada"].includes(solicitudActiva.estado) && (
             <div className="rounded-xl bg-yellow-50 p-4">
               <div className="flex items-start gap-3">
                 <svg className="mt-0.5 h-5 w-5 flex-shrink-0 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <div>
-                  <p className="text-sm font-medium text-yellow-800">Esperando confirmación de pago</p>
+                  <p className="text-sm font-medium text-yellow-800">Tu solicitud está en revisión</p>
                   <p className="mt-1 text-xs text-yellow-600">
-                    Tu solicitud fue recibida. Una vez confirmado el pago de ${precio.toFixed(2)},
-                    se agendará tu videollamada.
+                    La coach revisará tu solicitud, confirmará el pago y te enviará el enlace de la reunión.
                   </p>
                   {solicitudActiva.fechaPropuesta && (
-                    <p className="mt-2 text-xs font-medium text-yellow-700">
-                      Horario solicitado:{" "}
-                      {new Date(solicitudActiva.fechaPropuesta).toLocaleString("es", {
-                        weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
-                      })}
-                    </p>
+                    <div className="mt-3 rounded-lg bg-white/60 p-3">
+                      <p className="text-xs font-medium text-yellow-700">
+                        Horario solicitado:{" "}
+                        {new Date(solicitudActiva.fechaPropuesta).toLocaleString("es", {
+                          weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+                        })}
+                      </p>
+                      <p className="mt-0.5 text-xs text-yellow-600">Precio: ${precio.toFixed(2)}</p>
+                    </div>
                   )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Estado: pagada */}
-          {solicitudActiva.estado === "pagada" && (
-            <div className="rounded-xl bg-blue-50 p-4">
-              <div className="flex items-start gap-3">
-                <svg className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <div>
-                  <p className="text-sm font-medium text-blue-800">Pago confirmado - Esperando confirmación de la coach</p>
-                  {solicitudActiva.fechaPropuesta && (
-                    <p className="mt-1 text-sm text-blue-600">
-                      Horario solicitado:{" "}
-                      {new Date(solicitudActiva.fechaPropuesta).toLocaleString("es", {
-                        weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
-                      })}
-                    </p>
-                  )}
-                  <p className="mt-1 text-xs text-blue-500">La coach confirmará tu horario pronto.</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Estado: agendada */}
-          {solicitudActiva.estado === "agendada" && (
-            <div className="rounded-xl bg-purple-50 p-4">
-              <div className="flex items-start gap-3">
-                <svg className="mt-0.5 h-5 w-5 flex-shrink-0 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <div>
-                  <p className="text-sm font-medium text-purple-800">Horario propuesto, esperando confirmación</p>
-                  <p className="mt-1 text-sm text-purple-600">
-                    Propusiste:{" "}
-                    {new Date(solicitudActiva.fechaPropuesta!).toLocaleString("es", {
-                      weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
-                    })}
-                  </p>
-                  <p className="mt-1 text-xs text-purple-500">La coach confirmará tu horario pronto.</p>
                 </div>
               </div>
             </div>

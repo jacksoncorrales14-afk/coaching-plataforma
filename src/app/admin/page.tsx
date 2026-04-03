@@ -926,51 +926,32 @@ export default function AdminPage() {
                         {/* Acciones */}
                         <div className="mt-3 flex flex-wrap items-end gap-3">
                           {v.estado === "pendiente_pago" && (
-                            <button
-                              onClick={() => handleAccionVideollamada(v.id, "marcar_pagada")}
-                              className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white transition-all hover:bg-blue-700"
-                            >
-                              Marcar como pagada
-                            </button>
-                          )}
-
-                          {v.estado === "agendada" && (
                             <form
                               onSubmit={e => {
                                 e.preventDefault();
                                 const form = e.target as HTMLFormElement;
-                                const fechaConfirmada = (form.elements.namedItem("fechaConfirmada") as HTMLInputElement).value;
                                 const enlace = (form.elements.namedItem("enlace") as HTMLInputElement).value;
-                                if (fechaConfirmada && enlace) {
-                                  handleAccionVideollamada(v.id, "confirmar", { fechaConfirmada, enlace });
+                                if (enlace) {
+                                  handleAccionVideollamada(v.id, "confirmar", { enlace });
                                 }
                               }}
-                              className="flex flex-wrap items-end gap-2"
+                              className="flex w-full flex-wrap items-end gap-2"
                             >
-                              <div>
-                                <label className="mb-1 block text-[11px] font-medium text-gray-500">Fecha confirmada</label>
+                              <div className="flex-1">
+                                <label className="mb-1 block text-[11px] font-medium text-gray-500">Enlace de la reunión (Zoom, Meet, etc.)</label>
                                 <input
-                                  type="datetime-local"
-                                  name="fechaConfirmada"
-                                  required
-                                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-wine-400 focus:outline-none focus:ring-1 focus:ring-wine-400"
-                                />
-                              </div>
-                              <div>
-                                <label className="mb-1 block text-[11px] font-medium text-gray-500">Enlace de la reunion</label>
-                                <input
-                                  type="text"
+                                  type="url"
                                   name="enlace"
                                   placeholder="https://meet.google.com/..."
                                   required
-                                  className="w-64 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-wine-400 focus:outline-none focus:ring-1 focus:ring-wine-400"
+                                  className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-wine-400 focus:outline-none focus:ring-1 focus:ring-wine-400"
                                 />
                               </div>
                               <button
                                 type="submit"
-                                className="rounded-lg bg-purple-600 px-4 py-2 text-xs font-medium text-white transition-all hover:bg-purple-700"
+                                className="rounded-lg bg-green-600 px-4 py-2 text-xs font-medium text-white transition-all hover:bg-green-700"
                               >
-                                Confirmar
+                                Confirmar pago y agendar
                               </button>
                             </form>
                           )}
