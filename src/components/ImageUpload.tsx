@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Image from "next/image";
 
 interface ImageUploadProps {
   value: string;
@@ -44,11 +45,13 @@ export function ImageUpload({ value, onChange }: ImageUploadProps) {
       </label>
 
       {value && (
-        <div className="mb-3 overflow-hidden rounded-lg">
-          <img
+        <div className="relative mb-3 h-40 w-full overflow-hidden rounded-lg">
+          <Image
             src={value}
             alt="Portada"
-            className="h-40 w-full object-cover"
+            fill
+            sizes="100vw"
+            className="object-cover"
           />
         </div>
       )}

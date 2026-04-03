@@ -1,5 +1,7 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { getServerSession } from "next-auth";
+import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
@@ -59,3 +61,14 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
   },
 };
+
+export async function requireAdmin() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user || (session.user as any).role !== "admin") {
+    return {
+      session: null as null,
+      error: NextResponse.json({ error: "No autorizado" }, { status: 401 }),
+    };
+  }
+  return { session, error: null as null };
+}

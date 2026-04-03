@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions, requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseBody, updateClaseSchema } from "@/lib/validations";
 
 // GET /api/clases/[id]
 export async function GET(
@@ -65,24 +66,23 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "admin") {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
-    const body = await req.json();
+    const { data, error: valError } = parseBody(updateClaseSchema, await req.json());
+    if (valError) return valError;
 
     const clase = await prisma.clase.update({
       where: { id: params.id },
       data: {
-        titulo: body.titulo,
-        descripcion: body.descripcion,
-        contenido: body.contenido,
-        imagen: body.imagen,
-        precio: body.precio,
-        categoria: body.categoria,
-        publicada: body.publicada,
-        orden: body.orden,
+        titulo: data.titulo,
+        descripcion: data.descripcion,
+        contenido: data.contenido,
+        imagen: data.imagen,
+        precio: data.precio,
+        categoria: data.categoria,
+        publicada: data.publicada,
+        orden: data.orden,
       },
     });
 
@@ -99,10 +99,8 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "admin") {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
     await prisma.clase.delete({ where: { id: params.id } });
 

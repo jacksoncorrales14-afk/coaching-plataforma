@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions, requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseBody, createClaseSchema } from "@/lib/validations";
 
 // GET /api/clases - listar clases publicadas (público) o todas (admin)
 export async function GET(req: NextRequest) {
@@ -29,31 +30,22 @@ export async function GET(req: NextRequest) {
 // POST /api/clases - crear clase (solo admin)
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "admin") {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { session, error: authError } = await requireAdmin();
+    if (authError) return authError;
 
-    const body = await req.json();
-    const { titulo, descripcion, contenido, imagen, precio, categoria, publicada, orden } = body;
-
-    if (!titulo || !descripcion) {
-      return NextResponse.json(
-        { error: "Titulo y descripcion son requeridos" },
-        { status: 400 }
-      );
-    }
+    const { data, error: valError } = parseBody(createClaseSchema, await req.json());
+    if (valError) return valError;
 
     const clase = await prisma.clase.create({
       data: {
-        titulo,
-        descripcion,
-        contenido: contenido || "",
-        imagen: imagen || "",
-        precio: precio || 0,
-        categoria: categoria || "General",
-        publicada: publicada ?? false,
-        orden: orden || 0,
+        titulo: data.titulo,
+        descripcion: data.descripcion,
+        contenido: data.contenido,
+        imagen: data.imagen,
+        precio: data.precio,
+        categoria: data.categoria,
+        publicada: data.publicada,
+        orden: data.orden,
         authorId: session.user.id,
       },
     });

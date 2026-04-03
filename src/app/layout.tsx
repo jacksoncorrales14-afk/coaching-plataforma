@@ -21,8 +21,11 @@ export default function RootLayout({
     <html lang="es">
       <body className={inter.className}>
         <Providers>
+          <a href="#main-content" className="skip-link">
+            Saltar al contenido
+          </a>
           <Navbar />
-          <main className="min-h-screen">{children}</main>
+          <main id="main-content" className="min-h-screen">{children}</main>
           <footer className="border-t border-gray-100 bg-white py-8 text-center text-sm text-gray-400">
             <p>&copy; 2026 Deby Chantell Coach Academy. Todos los derechos reservados.</p>
           </footer>

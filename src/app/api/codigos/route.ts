@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generarCodigo } from "@/lib/codigos";
+import { parseBody, generarCodigosSchema } from "@/lib/validations";
 
 // GET /api/codigos?claseId=xxx - listar códigos de una clase (solo admin)
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "admin") {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
     const claseId = req.nextUrl.searchParams.get("claseId");
 
@@ -30,25 +28,15 @@ export async function GET(req: NextRequest) {
 // POST /api/codigos - generar códigos (solo admin)
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "admin") {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
-    const { claseId, cantidad } = await req.json();
-
-    if (!claseId) {
-      return NextResponse.json(
-        { error: "claseId es requerido" },
-        { status: 400 }
-      );
-    }
-
-    const cant = Math.min(Math.max(cantidad || 1, 1), 50);
+    const { data, error: valError } = parseBody(generarCodigosSchema, await req.json());
+    if (valError) return valError;
 
     // Generar códigos únicos en batch
     const codigosSet = new Set<string>();
-    while (codigosSet.size < cant) {
+    while (codigosSet.size < data.cantidad) {
       codigosSet.add(generarCodigo());
     }
 
@@ -78,7 +66,7 @@ export async function POST(req: NextRequest) {
     // Crear todos en una sola transacción
     const codigos = await prisma.$transaction(
       codigosFinales.map((codigo) =>
-        prisma.codigo.create({ data: { codigo, claseId } })
+        prisma.codigo.create({ data: { codigo, claseId: data.claseId } })
       )
     );
 

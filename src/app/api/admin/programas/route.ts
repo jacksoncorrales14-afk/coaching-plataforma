@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseBody, createProgramaSchema, updateProgramaSchema, deleteByIdSchema } from "@/lib/validations";
 
 // GET /api/admin/programas — listar programas con niveles y videos
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "admin") {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
     const programas = await prisma.programa.findMany({
       orderBy: { orden: "asc" },
@@ -36,26 +34,21 @@ export async function GET() {
 // POST /api/admin/programas — crear programa
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "admin") {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
-    const { titulo, descripcion, imagen, imagenPos, niveles } = await req.json();
-
-    if (!titulo) {
-      return NextResponse.json({ error: "Titulo es requerido" }, { status: 400 });
-    }
+    const { data, error: valError } = parseBody(createProgramaSchema, await req.json());
+    if (valError) return valError;
 
     const programa = await prisma.programa.create({
       data: {
-        titulo,
-        descripcion: descripcion || "",
-        imagen: imagen || "",
-        imagenPos: imagenPos || "50% 50%",
+        titulo: data.titulo,
+        descripcion: data.descripcion,
+        imagen: data.imagen,
+        imagenPos: data.imagenPos,
         publicado: false,
         niveles: {
-          create: (niveles || []).map((nivel: any, i: number) => ({
+          create: data.niveles.map((nivel: any, i: number) => ({
             titulo: nivel.titulo || `Nivel ${i + 1}`,
             descripcion: nivel.descripcion || "",
             orden: i,
@@ -85,16 +78,15 @@ export async function POST(req: NextRequest) {
 // PUT /api/admin/programas — actualizar programa
 export async function PUT(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "admin") {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
-    const { id, titulo, descripcion, imagen, imagenPos, precio, publicado } = await req.json();
+    const { data, error: valError } = parseBody(updateProgramaSchema, await req.json());
+    if (valError) return valError;
 
     const programa = await prisma.programa.update({
-      where: { id },
-      data: { titulo, descripcion, imagen, imagenPos, precio, publicado },
+      where: { id: data.id },
+      data: { titulo: data.titulo, descripcion: data.descripcion, imagen: data.imagen, imagenPos: data.imagenPos, precio: data.precio, publicado: data.publicado },
     });
 
     return NextResponse.json(programa);
@@ -107,13 +99,13 @@ export async function PUT(req: NextRequest) {
 // DELETE /api/admin/programas — eliminar programa
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "admin") {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
-    const { id } = await req.json();
-    await prisma.programa.delete({ where: { id } });
+    const { data, error: valError } = parseBody(deleteByIdSchema, await req.json());
+    if (valError) return valError;
+
+    await prisma.programa.delete({ where: { id: data.id } });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

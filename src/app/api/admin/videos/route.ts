@@ -1,30 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseBody, createVideoSchema, deleteByIdSchema } from "@/lib/validations";
 
 // POST /api/admin/videos — agregar video a un nivel
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "admin") {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
-    const { nivelId, titulo, url, duracion } = await req.json();
-    if (!nivelId || !titulo) {
-      return NextResponse.json({ error: "nivelId y titulo requeridos" }, { status: 400 });
-    }
+    const { data, error: valError } = parseBody(createVideoSchema, await req.json());
+    if (valError) return valError;
 
-    const count = await prisma.video.count({ where: { nivelId } });
+    const count = await prisma.video.count({ where: { nivelId: data.nivelId } });
 
     const video = await prisma.video.create({
       data: {
-        titulo,
-        url: url || "",
-        duracion: duracion || 0,
+        titulo: data.titulo,
+        url: data.url,
+        duracion: data.duracion,
         orden: count,
-        nivelId,
+        nivelId: data.nivelId,
       },
     });
 
@@ -38,13 +34,13 @@ export async function POST(req: NextRequest) {
 // DELETE /api/admin/videos — eliminar video
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "admin") {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
-    const { id } = await req.json();
-    await prisma.video.delete({ where: { id } });
+    const { data, error: valError } = parseBody(deleteByIdSchema, await req.json());
+    if (valError) return valError;
+
+    await prisma.video.delete({ where: { id: data.id } });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

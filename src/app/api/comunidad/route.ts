@@ -1,11 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, comentarioSchema } from "@/lib/validations";
 
 // GET /api/comunidad — listar comentarios con respuestas y reacciones
-export async function GET() {
+// Soporta filtros: ?tipo=programa&refId=PROGRAM_ID (default: tipo=comunidad, parentId=null)
+export async function GET(req: NextRequest) {
   try {
+    const tipo = req.nextUrl.searchParams.get("tipo") || "comunidad";
+    const refId = req.nextUrl.searchParams.get("refId") || "general";
+
+    const where: any = { parentId: null, tipo };
+    if (tipo === "comunidad") {
+      where.refId = "general";
+    } else {
+      where.refId = refId;
+    }
+
     const comentarios = await prisma.comentario.findMany({
-      where: { tipo: "comunidad", parentId: null },
+      where,
       orderBy: { createdAt: "desc" },
       take: 50,
       include: {
@@ -27,24 +39,16 @@ export async function GET() {
 // POST /api/comunidad — crear comentario o respuesta
 export async function POST(req: NextRequest) {
   try {
-    const { email, nombre, avatar, contenido, tipo, refId, parentId } = await req.json();
-
-    if (!email || !nombre || !contenido) {
-      return NextResponse.json(
-        { error: "Email, nombre y contenido son requeridos" },
-        { status: 400 }
-      );
-    }
-
-    const emailNorm = email.trim().toLowerCase();
+    const { data, error: valError } = parseBody(comentarioSchema, await req.json());
+    if (valError) return valError;
 
     // Verificar acceso
     const membresia = await prisma.membresia.findFirst({
-      where: { email: emailNorm, estado: "activa", expiraAt: { gt: new Date() } },
+      where: { email: data.email, estado: "activa", expiraAt: { gt: new Date() } },
     });
 
     const acceso = await prisma.acceso.findFirst({
-      where: { email: emailNorm, expiraAt: { gt: new Date() } },
+      where: { email: data.email, expiraAt: { gt: new Date() } },
     });
 
     if (!membresia && !acceso) {
@@ -56,13 +60,13 @@ export async function POST(req: NextRequest) {
 
     const comentario = await prisma.comentario.create({
       data: {
-        email: emailNorm,
-        nombre: nombre.trim(),
-        avatar: avatar || "",
-        contenido: contenido.trim(),
-        tipo: tipo || "comunidad",
-        refId: refId || "general",
-        parentId: parentId || null,
+        email: data.email,
+        nombre: data.nombre.trim(),
+        avatar: data.avatar,
+        contenido: data.contenido.trim(),
+        tipo: data.tipo,
+        refId: data.refId,
+        parentId: data.parentId,
       },
       include: { reacciones: true, respuestas: { include: { reacciones: true } } },
     });

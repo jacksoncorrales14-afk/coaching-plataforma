@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseBody, deleteByIdSchema } from "@/lib/validations";
 
 // GET /api/admin/comentarios — listar todos los comentarios
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "admin") {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
     const comentarios = await prisma.comentario.findMany({
       orderBy: { createdAt: "desc" },
@@ -26,13 +24,13 @@ export async function GET() {
 // DELETE /api/admin/comentarios — eliminar comentario
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "admin") {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
-    const { id } = await req.json();
-    await prisma.comentario.delete({ where: { id } });
+    const { data, error: valError } = parseBody(deleteByIdSchema, await req.json());
+    if (valError) return valError;
+
+    await prisma.comentario.delete({ where: { id: data.id } });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

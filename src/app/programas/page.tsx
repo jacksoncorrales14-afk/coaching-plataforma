@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 interface Programa {
@@ -20,12 +21,17 @@ export default function ProgramasPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/programas")
+    const controller = new AbortController();
+
+    fetch("/api/programas", { signal: controller.signal })
       .then((r) => r.json())
       .then((data) => {
         setProgramas(Array.isArray(data) ? data : []);
         setLoading(false);
-      });
+      })
+      .catch((e) => { if (e.name !== "AbortError") console.error(e); });
+
+    return () => controller.abort();
   }, []);
 
   const handleComprar = (prog: Programa) => {
@@ -71,10 +77,12 @@ export default function ProgramasPage() {
                   {/* Portada */}
                   <div className="relative h-52 bg-gradient-to-br from-wine-600 to-wine-800">
                     {prog.imagen && (
-                      <img
+                      <Image
                         src={prog.imagen}
                         alt={prog.titulo}
-                        className="absolute inset-0 h-full w-full object-cover opacity-40"
+                        fill
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                        className="object-cover opacity-40"
                         style={{ objectPosition: prog.imagenPos || "50% 50%" }}
                       />
                     )}

@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, desbloquearSchema } from "@/lib/validations";
 
 // POST /api/desbloquear - canjear un código
 export async function POST(req: NextRequest) {
   try {
-    const { codigo, email, nombre } = await req.json();
+    const { data, error: valError } = parseBody(desbloquearSchema, await req.json());
+    if (valError) return valError;
 
-    if (!codigo || !email || !nombre) {
-      return NextResponse.json(
-        { error: "Codigo, email y nombre son requeridos" },
-        { status: 400 }
-      );
-    }
-
-    const codigoNormalizado = codigo.trim().toUpperCase();
+    const codigoNormalizado = data.codigo.trim().toUpperCase();
 
     const codigoRecord = await prisma.codigo.findUnique({
       where: { codigo: codigoNormalizado },
@@ -44,15 +39,15 @@ export async function POST(req: NextRequest) {
         where: { id: codigoRecord.id },
         data: {
           usado: true,
-          usadoPor: email,
+          usadoPor: data.email,
           usadoAt: new Date(),
         },
       });
 
       return tx.acceso.create({
         data: {
-          email: email.trim().toLowerCase(),
-          nombre: nombre.trim(),
+          email: data.email,
+          nombre: data.nombre.trim(),
           claseId: codigoRecord.claseId,
           codigoId: codigoRecord.id,
           expiraAt,

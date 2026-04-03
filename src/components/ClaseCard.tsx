@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 interface ClaseCardProps {
   id: string;
@@ -23,10 +24,12 @@ export function ClaseCard({
     <div className="card group overflow-hidden p-0">
       <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-nude-100 to-nude-200">
         {imagen ? (
-          <img
+          <Image
             src={imagen}
             alt={titulo}
-            className="h-full w-full object-cover transition-transform group-hover:scale-105"
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="object-cover transition-transform group-hover:scale-105"
           />
         ) : (
           <div className="flex h-full items-center justify-center">

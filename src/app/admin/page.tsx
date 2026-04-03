@@ -4,6 +4,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 type Seccion = "dashboard" | "cursos" | "programas" | "membresias" | "comunidad";
 
@@ -324,10 +325,12 @@ export default function AdminPage() {
                       {/* Header con portada */}
                       <div className="relative h-48 bg-gradient-to-br from-wine-600 to-wine-800">
                         {prog.imagen && (
-                          <img
+                          <Image
                             src={prog.imagen}
                             alt={prog.titulo}
-                            className="absolute inset-0 h-full w-full object-cover opacity-40"
+                            fill
+                            sizes="(max-width: 768px) 100vw, 50vw"
+                            className="object-cover opacity-40"
                           />
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />

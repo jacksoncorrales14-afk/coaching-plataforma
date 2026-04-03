@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseBody, adminMembresiaSchema } from "@/lib/validations";
 
 // GET /api/admin/membresias — listar todas las membresías
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "admin") {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
     const membresias = await prisma.membresia.findMany({
       orderBy: { createdAt: "desc" },
@@ -25,26 +23,25 @@ export async function GET() {
 // PUT /api/admin/membresias — cancelar membresía
 export async function PUT(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "admin") {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
-    const { id, accion } = await req.json();
+    const { data, error: valError } = parseBody(adminMembresiaSchema, await req.json());
+    if (valError) return valError;
 
-    if (accion === "cancelar") {
+    if (data.accion === "cancelar") {
       const membresia = await prisma.membresia.update({
-        where: { id },
+        where: { id: data.id },
         data: { estado: "cancelada", canceladaAt: new Date() },
       });
       return NextResponse.json(membresia);
     }
 
-    if (accion === "reactivar") {
+    if (data.accion === "reactivar") {
       const expiraAt = new Date();
       expiraAt.setDate(expiraAt.getDate() + 30);
       const membresia = await prisma.membresia.update({
-        where: { id },
+        where: { id: data.id },
         data: { estado: "activa", canceladaAt: null, expiraAt },
       });
       return NextResponse.json(membresia);

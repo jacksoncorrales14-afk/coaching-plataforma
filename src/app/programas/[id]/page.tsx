@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
+import { ComunidadTab } from "@/components/dashboard/ComunidadTab";
 
 interface Tarea {
   id: string;
@@ -62,6 +64,12 @@ export default function ProgramaPage() {
   const [videoActivo, setVideoActivo] = useState<string | null>(null);
   const [marcando, setMarcando] = useState(false);
 
+  // Foro del programa
+  const [comentarios, setComentarios] = useState<any[]>([]);
+  const [perfil, setPerfil] = useState({ email: "", nombre: "", avatar: "", bio: "" });
+  const [nombreGuardado, setNombreGuardado] = useState(false);
+  const [showForo, setShowForo] = useState(false);
+
   useEffect(() => {
     const savedEmail = localStorage.getItem("coach_email");
     const savedAuth = localStorage.getItem("coach_auth");
@@ -70,25 +78,45 @@ export default function ProgramaPage() {
       return;
     }
     setEmail(savedEmail);
-    cargarPrograma(savedEmail);
+
+    const controller = new AbortController();
+    const opts = { signal: controller.signal };
+
+    cargarPrograma(savedEmail, controller.signal);
+
+    // Cargar perfil y comentarios del foro del programa
+    Promise.all([
+      fetch(`/api/perfil?email=${encodeURIComponent(savedEmail)}`, opts).then(r => r.json()),
+      fetch(`/api/comunidad?tipo=programa&refId=${params.id}`, opts).then(r => r.json()).catch(() => []),
+    ]).then(([perfilData, comData]) => {
+      setPerfil(perfilData);
+      setNombreGuardado(!!perfilData.nombre);
+      setComentarios(Array.isArray(comData) ? comData : []);
+    }).catch(e => { if (e.name !== "AbortError") console.error(e); });
+
+    return () => controller.abort();
   }, [params.id, router]);
 
-  const cargarPrograma = async (correo: string) => {
-    const res = await fetch(`/api/programas/${params.id}?email=${encodeURIComponent(correo)}`);
-    if (!res.ok) { router.push("/mi-cuenta/dashboard"); return; }
-    const data = await res.json();
-    setPrograma(data);
+  const cargarPrograma = async (correo: string, signal?: AbortSignal) => {
+    try {
+      const res = await fetch(`/api/programas/${params.id}?email=${encodeURIComponent(correo)}`, signal ? { signal } : {});
+      if (!res.ok) { router.push("/mi-cuenta/dashboard"); return; }
+      const data = await res.json();
+      setPrograma(data);
 
-    // Seleccionar primer video disponible
-    for (const nivel of data.niveles) {
-      if (nivel.desbloqueado && nivel.videos.length > 0) {
-        const sinVer = nivel.videos.find((v: Video) => !v.visto);
-        setVideoActivo(sinVer?.id || nivel.videos[0].id);
-        setNivelActivo(data.niveles.indexOf(nivel));
-        break;
+      // Seleccionar primer video disponible
+      for (const nivel of data.niveles) {
+        if (nivel.desbloqueado && nivel.videos.length > 0) {
+          const sinVer = nivel.videos.find((v: Video) => !v.visto);
+          setVideoActivo(sinVer?.id || nivel.videos[0].id);
+          setNivelActivo(data.niveles.indexOf(nivel));
+          break;
+        }
       }
+      setLoading(false);
+    } catch (e: any) {
+      if (e.name !== "AbortError") console.error(e);
     }
-    setLoading(false);
   };
 
   const handleMarcarVisto = async (videoId: string) => {
@@ -100,6 +128,15 @@ export default function ProgramaPage() {
     });
     await cargarPrograma(email);
     setMarcando(false);
+  };
+
+  const handleGuardarPerfil = async () => {
+    await fetch("/api/perfil", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, nombre: perfil.nombre, bio: perfil.bio }),
+    });
+    localStorage.setItem("coach_nombre", perfil.nombre);
   };
 
   const handleToggleTarea = async (tareaId: string) => {
@@ -136,7 +173,7 @@ export default function ProgramaPage() {
         <div className="relative overflow-hidden bg-wine-600 py-20">
           <div className="absolute inset-0 bg-gradient-to-br from-wine-700/50 via-transparent to-wine-800/30" />
           {programa.imagen && (
-            <img src={programa.imagen} alt="" className="absolute inset-0 h-full w-full object-cover opacity-20" style={{ objectPosition: programa.imagenPos }} />
+            <Image src={programa.imagen} alt="" fill sizes="100vw" className="object-cover opacity-20" style={{ objectPosition: programa.imagenPos }} />
           )}
           <div className="relative mx-auto max-w-3xl px-4 text-center sm:px-6">
             <Link href="/programas" className="mb-4 inline-block text-sm text-wine-200 hover:text-white">
@@ -187,7 +224,7 @@ export default function ProgramaPage() {
       <div className="relative overflow-hidden bg-wine-600">
         <div className="absolute inset-0 bg-gradient-to-br from-wine-700/50 via-transparent to-wine-800/30" />
         {programa.imagen && (
-          <img src={programa.imagen} alt="" className="absolute inset-0 h-full w-full object-cover opacity-20" style={{ objectPosition: programa.imagenPos }} />
+          <Image src={programa.imagen} alt="" fill sizes="100vw" className="object-cover opacity-20" style={{ objectPosition: programa.imagenPos }} />
         )}
         <div className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6">
           <Link href="/mi-cuenta/dashboard" className="mb-3 inline-block text-sm text-wine-200 hover:text-white">
@@ -442,6 +479,56 @@ export default function ProgramaPage() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Foro del programa */}
+        <div className="mt-8">
+          <button
+            onClick={() => setShowForo(!showForo)}
+            className="flex w-full items-center justify-between rounded-2xl bg-white p-5 shadow-sm transition-all hover:shadow-md"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-wine-50">
+                <svg className="h-5 w-5 text-wine-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                </svg>
+              </div>
+              <div className="text-left">
+                <h3 className="font-bold text-gray-900">Foro del Programa</h3>
+                <p className="text-sm text-gray-500">
+                  {comentarios.length} {comentarios.length === 1 ? "comentario" : "comentarios"} · Preguntas y discusiones
+                </p>
+              </div>
+            </div>
+            <svg
+              className={`h-5 w-5 text-gray-400 transition-transform ${showForo ? "rotate-180" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {showForo && (
+            <div className="mt-4">
+              <ComunidadTab
+                email={email}
+                perfil={perfil}
+                comentarios={comentarios}
+                setComentarios={setComentarios}
+                nombreGuardado={nombreGuardado}
+                setNombreGuardado={setNombreGuardado}
+                setPerfil={setPerfil}
+                onGuardarPerfil={handleGuardarPerfil}
+                tipo="programa"
+                refId={params.id as string}
+                titulo="Foro del Programa"
+                subtitulo="Comparte dudas, ideas y conecta con otras alumnas del programa"
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

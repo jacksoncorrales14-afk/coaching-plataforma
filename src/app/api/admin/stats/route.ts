@@ -1,15 +1,12 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/admin/stats — estadísticas generales
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "admin") {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
     const [
       totalCursos,
@@ -22,7 +19,7 @@ export async function GET() {
       totalComentarios,
       totalProgramas,
       ingresoMembresiaAgg,
-      ingresoCursosAgg,
+      ingresoCursosRaw,
     ] = await Promise.all([
       prisma.clase.count(),
       prisma.clase.count({ where: { publicada: true } }),
@@ -34,14 +31,15 @@ export async function GET() {
       prisma.comentario.count(),
       prisma.programa.count(),
       prisma.membresia.aggregate({ _sum: { precioMensual: true } }),
-      prisma.acceso.findMany({
-        select: { clase: { select: { precio: true } } },
-        take: 1000,
-      }),
+      prisma.$queryRaw<[{ total: number }]>`
+        SELECT COALESCE(SUM(c.precio), 0) as total
+        FROM "Acceso" a
+        JOIN "Clase" c ON a."claseId" = c.id
+      `,
     ]);
 
     const ingresoMembresias = ingresoMembresiaAgg._sum.precioMensual || 0;
-    const ingresoCursos = ingresoCursosAgg.reduce((s, a) => s + a.clase.precio, 0);
+    const ingresoCursos = Number(ingresoCursosRaw[0]?.total || 0);
 
     return NextResponse.json({
       totalCursos,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSupabase } from "@/lib/supabase";
 import { nanoid } from "nanoid";
+import { parseBody, updatePerfilSchema } from "@/lib/validations";
 
 // GET /api/perfil?email=xxx
 export async function GET(req: NextRequest) {
@@ -25,18 +26,16 @@ export async function GET(req: NextRequest) {
 // PUT /api/perfil — actualizar nombre, bio
 export async function PUT(req: NextRequest) {
   try {
-    const { email, nombre, bio } = await req.json();
-    if (!email) {
-      return NextResponse.json({ error: "Email requerido" }, { status: 400 });
-    }
+    const { data, error: valError } = parseBody(updatePerfilSchema, await req.json());
+    if (valError) return valError;
 
     const perfil = await prisma.perfil.upsert({
-      where: { email: email.trim().toLowerCase() },
-      update: { nombre: nombre?.trim() || "", bio: bio?.trim() || "" },
+      where: { email: data.email },
+      update: { nombre: data.nombre, bio: data.bio },
       create: {
-        email: email.trim().toLowerCase(),
-        nombre: nombre?.trim() || "",
-        bio: bio?.trim() || "",
+        email: data.email,
+        nombre: data.nombre,
+        bio: data.bio,
       },
     });
 

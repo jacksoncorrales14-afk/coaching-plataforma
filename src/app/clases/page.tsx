@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 interface Clase {
   id: string;
@@ -32,21 +33,28 @@ export default function ClasesPage() {
   } | null>(null);
 
   useEffect(() => {
-    fetch("/api/clases")
+    const controller = new AbortController();
+    const opts = { signal: controller.signal };
+
+    fetch("/api/clases", opts)
       .then((r) => r.json())
       .then(setClases)
+      .catch((e) => { if (e.name !== "AbortError") console.error(e); })
       .finally(() => setLoading(false));
 
     const email = localStorage.getItem("coach_email");
     if (email) {
-      fetch(`/api/mis-clases?email=${encodeURIComponent(email)}`)
+      fetch(`/api/mis-clases?email=${encodeURIComponent(email)}`, opts)
         .then((r) => r.json())
         .then((data: any[]) => {
           setAccesos(
             data.map((a) => ({ claseId: a.clase.id, expiraAt: a.expiraAt }))
           );
-        });
+        })
+        .catch((e) => { if (e.name !== "AbortError") console.error(e); });
     }
+
+    return () => controller.abort();
   }, []);
 
   const categorias = [
@@ -177,10 +185,12 @@ export default function ClasesPage() {
                   {/* Imagen */}
                   <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
                     {clase.imagen ? (
-                      <img
+                      <Image
                         src={clase.imagen}
                         alt={clase.titulo}
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center">
@@ -257,7 +267,13 @@ export default function ClasesPage() {
 
       {/* Modal código post-pago */}
       {modalCodigo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-pago-titulo"
+          onKeyDown={(e) => { if (e.key === "Escape") setModalCodigo(null); }}
+        >
           <div className="w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-2xl">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
               <svg
@@ -265,6 +281,7 @@ export default function ClasesPage() {
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -274,7 +291,7 @@ export default function ClasesPage() {
                 />
               </svg>
             </div>
-            <h2 className="mb-2 text-2xl font-bold text-gray-900">
+            <h2 id="modal-pago-titulo" className="mb-2 text-2xl font-bold text-gray-900">
               Pago exitoso!
             </h2>
             <p className="mb-6 text-sm text-gray-500">

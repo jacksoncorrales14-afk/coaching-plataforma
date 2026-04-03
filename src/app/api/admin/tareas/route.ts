@@ -1,28 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseBody, createTareaSchema, deleteByIdSchema } from "@/lib/validations";
 
 // POST /api/admin/tareas — crear tarea para un video
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "admin") {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
-    const { videoId, titulo, descripcion } = await req.json();
-    if (!videoId || !titulo) {
-      return NextResponse.json({ error: "videoId y titulo requeridos" }, { status: 400 });
-    }
+    const { data, error: valError } = parseBody(createTareaSchema, await req.json());
+    if (valError) return valError;
 
-    const count = await prisma.tarea.count({ where: { videoId } });
+    const count = await prisma.tarea.count({ where: { videoId: data.videoId } });
 
     const tarea = await prisma.tarea.create({
       data: {
-        videoId,
-        titulo,
-        descripcion: descripcion || "",
+        videoId: data.videoId,
+        titulo: data.titulo,
+        descripcion: data.descripcion,
         orden: count,
       },
     });
@@ -37,13 +33,13 @@ export async function POST(req: NextRequest) {
 // DELETE /api/admin/tareas — eliminar tarea
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "admin") {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
-    const { id } = await req.json();
-    await prisma.tarea.delete({ where: { id } });
+    const { data, error: valError } = parseBody(deleteByIdSchema, await req.json());
+    if (valError) return valError;
+
+    await prisma.tarea.delete({ where: { id: data.id } });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

@@ -1,29 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseBody, createNivelSchema, deleteByIdSchema } from "@/lib/validations";
 
 // POST /api/admin/niveles — agregar nivel a un programa
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "admin") {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
-    const { programaId, titulo, descripcion } = await req.json();
-    if (!programaId || !titulo) {
-      return NextResponse.json({ error: "programaId y titulo requeridos" }, { status: 400 });
-    }
+    const { data, error: valError } = parseBody(createNivelSchema, await req.json());
+    if (valError) return valError;
 
-    const count = await prisma.nivel.count({ where: { programaId } });
+    const count = await prisma.nivel.count({ where: { programaId: data.programaId } });
 
     const nivel = await prisma.nivel.create({
       data: {
-        titulo,
-        descripcion: descripcion || "",
+        titulo: data.titulo,
+        descripcion: data.descripcion,
         orden: count,
-        programaId,
+        programaId: data.programaId,
       },
       include: { videos: true },
     });
@@ -38,13 +34,13 @@ export async function POST(req: NextRequest) {
 // DELETE /api/admin/niveles — eliminar nivel
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "admin") {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
-    const { id } = await req.json();
-    await prisma.nivel.delete({ where: { id } });
+    const { data, error: valError } = parseBody(deleteByIdSchema, await req.json());
+    if (valError) return valError;
+
+    await prisma.nivel.delete({ where: { id: data.id } });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

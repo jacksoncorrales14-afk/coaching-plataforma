@@ -22,30 +22,35 @@ export default function ClaseDetailPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Obtener datos de la clase (ya no incluye contenido para usuarios públicos)
-    fetch(`/api/clases/${params.id}`)
-      .then((r) => r.json())
-      .then((data) => {
-        setClase(data);
-        setLoading(false);
-      });
-
-    // Verificar acceso y obtener contenido desde endpoint protegido
+    const controller = new AbortController();
     const email =
       searchParams.get("email") || localStorage.getItem("coach_email");
-    if (email) {
-      fetch(`/api/clases/${params.id}/contenido?email=${encodeURIComponent(email)}`)
-        .then((r) => {
-          if (r.ok) {
-            setHasAccess(true);
-            return r.json();
-          }
-          return null;
-        })
-        .then((data) => {
-          if (data) setContenido(data.contenido);
-        });
-    }
+
+    const clasePromise = fetch(`/api/clases/${params.id}`, {
+      signal: controller.signal,
+    }).then((r) => r.json());
+
+    const contenidoPromise = email
+      ? fetch(
+          `/api/clases/${params.id}/contenido?email=${encodeURIComponent(email)}`,
+          { signal: controller.signal }
+        ).then((r) => (r.ok ? r.json() : null))
+      : Promise.resolve(null);
+
+    Promise.all([clasePromise, contenidoPromise])
+      .then(([claseData, contenidoData]) => {
+        setClase(claseData);
+        if (contenidoData) {
+          setHasAccess(true);
+          setContenido(contenidoData.contenido);
+        }
+        setLoading(false);
+      })
+      .catch((e) => {
+        if (e.name !== "AbortError") console.error(e);
+      });
+
+    return () => controller.abort();
   }, [params.id, searchParams]);
 
   if (loading) {

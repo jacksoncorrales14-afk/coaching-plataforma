@@ -1,20 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, toggleTareaSchema } from "@/lib/validations";
 
 // POST /api/tareas — marcar tarea como completada (toggle)
 export async function POST(req: NextRequest) {
   try {
-    const { email, tareaId, nota } = await req.json();
-
-    if (!email || !tareaId) {
-      return NextResponse.json({ error: "Email y tareaId requeridos" }, { status: 400 });
-    }
-
-    const emailNorm = email.trim().toLowerCase();
+    const { data, error: valError } = parseBody(toggleTareaSchema, await req.json());
+    if (valError) return valError;
 
     // Toggle: si ya existe, eliminar; si no, crear
     const existente = await prisma.tareaCompletada.findUnique({
-      where: { email_tareaId: { email: emailNorm, tareaId } },
+      where: { email_tareaId: { email: data.email, tareaId: data.tareaId } },
     });
 
     if (existente) {
@@ -24,9 +20,9 @@ export async function POST(req: NextRequest) {
 
     await prisma.tareaCompletada.create({
       data: {
-        email: emailNorm,
-        tareaId,
-        nota: nota || "",
+        email: data.email,
+        tareaId: data.tareaId,
+        nota: data.nota,
       },
     });
 
