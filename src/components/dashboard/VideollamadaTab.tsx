@@ -41,6 +41,13 @@ const estadoLabel: Record<string, { text: string; color: string }> = {
 
 const DIAS_SEMANA = ["L", "M", "M", "J", "V", "S", "D"];
 
+function formatHora12(hora24: string): string {
+  const [h, m] = hora24.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${m.toString().padStart(2, "0")} ${ampm}`;
+}
+
 function getMesNombre(mes: number): string {
   const nombres = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -311,17 +318,33 @@ export function VideollamadaTab({
         /* No tiene solicitud activa - Mostrar calendario para agendar */
         <div className="mb-8 rounded-2xl bg-white p-6 shadow-sm">
           {/* Header */}
-          <div className="mb-4 text-center">
+          <div className="mb-6 text-center">
             <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-wine-50">
               <svg className="h-7 w-7 text-wine-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
             </div>
-            <h3 className="text-lg font-bold text-gray-900">Agenda tu sesión</h3>
+            <h3 className="text-lg font-bold text-gray-900">Sesión personalizada con Deby</h3>
             <p className="mt-1 text-sm text-gray-500">
-              Selecciona una fecha y hora disponible para tu videollamada
+              Resuelve tus dudas, revisa tu estrategia o recibe mentoría en vivo
             </p>
-            <p className="mt-2 text-2xl font-extrabold text-wine-600">${precio.toFixed(2)}</p>
+            <p className="mt-3 text-2xl font-extrabold text-wine-600">${precio.toFixed(2)}</p>
+            <p className="text-xs text-gray-400">Duración: 30 minutos</p>
+
+            {/* Pasos */}
+            <div className="mt-5 flex items-center justify-center gap-2 text-xs text-gray-400">
+              <span className="flex items-center gap-1 rounded-full bg-wine-50 px-3 py-1 font-medium text-wine-600">
+                1. Elige fecha
+              </span>
+              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              <span className={`flex items-center gap-1 rounded-full px-3 py-1 font-medium ${fechaSeleccionada ? "bg-wine-50 text-wine-600" : "bg-gray-100 text-gray-400"}`}>
+                2. Elige hora
+              </span>
+              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              <span className={`flex items-center gap-1 rounded-full px-3 py-1 font-medium ${horaSeleccionada ? "bg-wine-50 text-wine-600" : "bg-gray-100 text-gray-400"}`}>
+                3. Confirmar
+              </span>
+            </div>
           </div>
 
           {cargandoDisp ? (
@@ -427,7 +450,7 @@ export function VideollamadaTab({
                     </span>
                   </p>
                   {horasDelDia.length > 0 ? (
-                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                       {horasDelDia.map((hora) => {
                         const isSelected = hora === horaSeleccionada;
                         return (
@@ -435,14 +458,17 @@ export function VideollamadaTab({
                             key={hora}
                             onClick={() => setHoraSeleccionada(hora)}
                             className={`
-                              rounded-full px-3 py-2 text-sm font-medium transition
+                              flex items-center justify-center gap-1.5 rounded-xl px-4 py-3 text-sm font-semibold transition
                               ${isSelected
-                                ? "bg-wine-600 text-white"
-                                : "bg-gray-100 text-gray-700 hover:bg-wine-50 hover:text-wine-700"
+                                ? "bg-wine-600 text-white shadow-md"
+                                : "bg-gray-50 text-gray-700 hover:bg-wine-50 hover:text-wine-700 hover:shadow-sm"
                               }
                             `}
                           >
-                            {hora}
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {formatHora12(hora)}
                           </button>
                         );
                       })}
@@ -455,16 +481,18 @@ export function VideollamadaTab({
 
               {/* Message + submit */}
               {horaSeleccionada && (
-                <div className="mx-auto mt-6 max-w-sm space-y-3">
-                  <div className="rounded-xl bg-wine-50 p-3 text-center">
-                    <p className="text-sm font-medium text-wine-700">
-                      {new Date(`${fechaSeleccionada}T${horaSeleccionada}:00`).toLocaleString("es", {
+                <div className="mx-auto mt-6 max-w-sm space-y-4">
+                  <div className="rounded-2xl bg-wine-50 p-4 text-center">
+                    <p className="text-xs font-medium uppercase tracking-wider text-wine-500">Tu sesión</p>
+                    <p className="mt-1 text-lg font-bold text-wine-700">
+                      {new Date(`${fechaSeleccionada}T00:00:00`).toLocaleDateString("es", {
                         weekday: "long",
                         day: "numeric",
                         month: "long",
-                        hour: "2-digit",
-                        minute: "2-digit",
                       })}
+                    </p>
+                    <p className="text-sm font-semibold text-wine-600">
+                      {formatHora12(horaSeleccionada)} · 30 minutos
                     </p>
                   </div>
                   <textarea
@@ -472,14 +500,21 @@ export function VideollamadaTab({
                     onChange={(e) => setMensaje(e.target.value)}
                     className="input-field resize-none"
                     rows={2}
-                    placeholder="¿Sobre qué te gustaría hablar? (opcional)"
+                    placeholder="Cuéntale a la coach sobre qué te gustaría hablar... (opcional)"
                   />
                   <button
                     onClick={handleSolicitar}
                     disabled={solicitando}
-                    className="btn-primary w-full py-3"
+                    className="btn-primary w-full py-3.5 text-base"
                   >
-                    {solicitando ? "Solicitando..." : "Solicitar videollamada"}
+                    {solicitando ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Solicitando...
+                      </span>
+                    ) : (
+                      <>Solicitar videollamada · ${precio.toFixed(2)}</>
+                    )}
                   </button>
                 </div>
               )}

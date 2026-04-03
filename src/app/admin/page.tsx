@@ -79,7 +79,7 @@ export default function AdminPage() {
   const [editandoPrecio, setEditandoPrecio] = useState(false);
   const [loading, setLoading] = useState(true);
   const [horarioSemanal, setHorarioSemanal] = useState(
-    Array.from({ length: 7 }, () => ({ horaInicio: "09:00", horaFin: "17:00" }))
+    Array.from({ length: 7 }, () => ({ horaInicio: "12:00", horaFin: "19:00" }))
   );
   const [fechaBloqueo, setFechaBloqueo] = useState("");
 
