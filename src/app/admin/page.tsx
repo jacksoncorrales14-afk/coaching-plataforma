@@ -78,10 +78,9 @@ export default function AdminPage() {
   const [configActiva, setConfigActiva] = useState(true);
   const [editandoPrecio, setEditandoPrecio] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [horarioSemanal, setHorarioSemanal] = useState(
-    Array.from({ length: 7 }, () => ({ horaInicio: "12:00", horaFin: "19:00" }))
-  );
+  // horarioSemanal removed — base schedule is fixed 12-7PM, admin only blocks
   const [fechaBloqueo, setFechaBloqueo] = useState("");
+  const [fechaBloqueoFin, setFechaBloqueoFin] = useState("");
   const [horaBloqueoInicio, setHoraBloqueoInicio] = useState("");
   const [horaBloqueoFin, setHoraBloqueoFin] = useState("");
   const [bloqueoDiaCompleto, setBloqueoDiaCompleto] = useState(true);
@@ -671,155 +670,179 @@ export default function AdminPage() {
 
             {/* Disponibilidad */}
             <div className="mb-8 rounded-2xl bg-white p-6 shadow-sm">
-              <h2 className="mb-4 text-lg font-bold text-gray-900">Horarios de disponibilidad</h2>
+              <h2 className="mb-1 text-lg font-bold text-gray-900">Días no disponibles</h2>
+              <p className="mb-5 text-sm text-gray-500">
+                Tu horario base es de <strong>12:00 PM a 7:00 PM</strong> todos los días. Marca aquí cuándo <strong>no</strong> puedes atender.
+              </p>
 
-              {/* Horario semanal */}
-              <div className="mb-6">
-                <h3 className="mb-3 text-sm font-semibold text-gray-700">Horario semanal</h3>
-                <div className="space-y-2">
-                  {["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"].map((dia, i) => (
-                    <div key={i} className="flex flex-wrap items-center gap-3 rounded-xl bg-gray-50 px-4 py-2.5">
-                      <span className="w-24 text-sm font-medium text-gray-700">{dia}</span>
-                      <div className="flex items-center gap-2">
-                        <label className="text-[11px] text-gray-500">Inicio</label>
-                        <input
-                          type="time"
-                          value={horarioSemanal[i].horaInicio}
-                          onChange={e => {
-                            const nuevo = [...horarioSemanal];
-                            nuevo[i] = { ...nuevo[i], horaInicio: e.target.value };
-                            setHorarioSemanal(nuevo);
-                          }}
-                          className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm focus:border-wine-400 focus:outline-none focus:ring-1 focus:ring-wine-400"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <label className="text-[11px] text-gray-500">Fin</label>
-                        <input
-                          type="time"
-                          value={horarioSemanal[i].horaFin}
-                          onChange={e => {
-                            const nuevo = [...horarioSemanal];
-                            nuevo[i] = { ...nuevo[i], horaFin: e.target.value };
-                            setHorarioSemanal(nuevo);
-                          }}
-                          className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm focus:border-wine-400 focus:outline-none focus:ring-1 focus:ring-wine-400"
-                        />
-                      </div>
-                      <button
-                        onClick={async () => {
-                          const res = await fetch("/api/admin/disponibilidad", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              diaSemana: i,
-                              horaInicio: horarioSemanal[i].horaInicio,
-                              horaFin: horarioSemanal[i].horaFin,
-                              disponible: true,
-                            }),
-                          });
-                          if (res.ok) {
-                            const nuevo = await res.json();
-                            setBloques(prev => [...prev, nuevo]);
-                          }
-                        }}
-                        className="rounded-lg bg-wine-600 px-3 py-1.5 text-xs font-medium text-white transition-all hover:bg-wine-700"
-                      >
-                        Guardar
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Bloquear fecha específica */}
-              <div className="mb-6">
-                <h3 className="mb-3 text-sm font-semibold text-gray-700">Bloquear fecha específica</h3>
+              {/* Bloquear fechas */}
+              <div className="mb-6 rounded-xl bg-gray-50 p-4">
+                <h3 className="mb-3 text-sm font-semibold text-gray-700">Bloquear fechas</h3>
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="date"
-                      value={fechaBloqueo}
-                      onChange={e => setFechaBloqueo(e.target.value)}
-                      className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-wine-400 focus:outline-none focus:ring-1 focus:ring-wine-400"
-                    />
-                    <label className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-gray-500">Desde</label>
                       <input
-                        type="checkbox"
-                        checked={bloqueoDiaCompleto}
-                        onChange={e => setBloqueoDiaCompleto(e.target.checked)}
-                        className="rounded border-gray-300 text-wine-600 focus:ring-wine-500"
+                        type="date"
+                        value={fechaBloqueo}
+                        onChange={e => setFechaBloqueo(e.target.value)}
+                        className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm focus:border-wine-400 focus:outline-none focus:ring-1 focus:ring-wine-400"
                       />
-                      Día completo
-                    </label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-gray-500">Hasta</label>
+                      <input
+                        type="date"
+                        value={fechaBloqueoFin}
+                        onChange={e => setFechaBloqueoFin(e.target.value)}
+                        min={fechaBloqueo}
+                        className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm focus:border-wine-400 focus:outline-none focus:ring-1 focus:ring-wine-400"
+                      />
+                    </div>
                   </div>
+
+                  <label className="flex items-center gap-2 text-sm text-gray-600">
+                    <input
+                      type="checkbox"
+                      checked={bloqueoDiaCompleto}
+                      onChange={e => setBloqueoDiaCompleto(e.target.checked)}
+                      className="rounded border-gray-300 text-wine-600 focus:ring-wine-500"
+                    />
+                    Día(s) completo(s)
+                  </label>
+
                   {!bloqueoDiaCompleto && (
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500">De</span>
+                      <span className="text-xs text-gray-500">Solo de</span>
                       <input
                         type="time"
                         value={horaBloqueoInicio}
                         onChange={e => setHoraBloqueoInicio(e.target.value)}
-                        className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-wine-400 focus:outline-none focus:ring-1 focus:ring-wine-400"
+                        className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm focus:border-wine-400 focus:outline-none focus:ring-1 focus:ring-wine-400"
                       />
                       <span className="text-xs text-gray-500">a</span>
                       <input
                         type="time"
                         value={horaBloqueoFin}
                         onChange={e => setHoraBloqueoFin(e.target.value)}
-                        className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-wine-400 focus:outline-none focus:ring-1 focus:ring-wine-400"
+                        className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm focus:border-wine-400 focus:outline-none focus:ring-1 focus:ring-wine-400"
                       />
                     </div>
                   )}
+
                   <button
                     onClick={async () => {
                       if (!fechaBloqueo) return;
                       if (!bloqueoDiaCompleto && (!horaBloqueoInicio || !horaBloqueoFin)) return;
-                      const res = await fetch("/api/admin/disponibilidad", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          diaSemana: -1,
-                          horaInicio: bloqueoDiaCompleto ? "00:00" : horaBloqueoInicio,
-                          horaFin: bloqueoDiaCompleto ? "23:59" : horaBloqueoFin,
-                          disponible: false,
-                          fechaEspecifica: fechaBloqueo,
-                        }),
-                      });
-                      if (res.ok) {
-                        const nuevo = await res.json();
-                        setBloques(prev => [...prev, nuevo]);
-                        setFechaBloqueo("");
-                        setHoraBloqueoInicio("");
-                        setHoraBloqueoFin("");
-                        setBloqueoDiaCompleto(true);
+
+                      const inicio = new Date(fechaBloqueo + "T00:00:00");
+                      const fin = fechaBloqueoFin ? new Date(fechaBloqueoFin + "T00:00:00") : inicio;
+                      const nuevos: any[] = [];
+
+                      for (let d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
+                        const fechaStr = d.toISOString().split("T")[0];
+                        const res = await fetch("/api/admin/disponibilidad", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            diaSemana: -1,
+                            horaInicio: bloqueoDiaCompleto ? "00:00" : horaBloqueoInicio,
+                            horaFin: bloqueoDiaCompleto ? "23:59" : horaBloqueoFin,
+                            disponible: false,
+                            fechaEspecifica: fechaStr,
+                          }),
+                        });
+                        if (res.ok) {
+                          nuevos.push(await res.json());
+                        }
                       }
+
+                      setBloques(prev => [...prev, ...nuevos]);
+                      setFechaBloqueo("");
+                      setFechaBloqueoFin("");
+                      setHoraBloqueoInicio("");
+                      setHoraBloqueoFin("");
+                      setBloqueoDiaCompleto(true);
                     }}
-                    className="rounded-lg bg-red-600 px-4 py-1.5 text-xs font-medium text-white transition-all hover:bg-red-700"
+                    className="rounded-lg bg-red-600 px-5 py-2 text-sm font-medium text-white transition-all hover:bg-red-700"
                   >
-                    Bloquear
+                    Bloquear {fechaBloqueoFin && fechaBloqueo !== fechaBloqueoFin ? "fechas" : "fecha"}
                   </button>
                 </div>
               </div>
 
-              {/* Lista de bloques configurados */}
+              {/* Bloquear día de la semana recurrente */}
+              <div className="mb-6 rounded-xl bg-gray-50 p-4">
+                <h3 className="mb-3 text-sm font-semibold text-gray-700">Bloquear día de la semana (recurrente)</h3>
+                <p className="mb-3 text-xs text-gray-400">Si nunca atiendes cierto día, bloquéalo aquí.</p>
+                <div className="flex flex-wrap gap-2">
+                  {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map((dia, i) => {
+                    const yaBloqueado = bloques.some(b => b.diaSemana === i && !b.disponible);
+                    return (
+                      <button
+                        key={i}
+                        onClick={async () => {
+                          if (yaBloqueado) {
+                            const bloque = bloques.find(b => b.diaSemana === i && !b.disponible);
+                            if (bloque) {
+                              const res = await fetch("/api/admin/disponibilidad", {
+                                method: "DELETE",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ id: bloque.id }),
+                              });
+                              if (res.ok) setBloques(prev => prev.filter(x => x.id !== bloque.id));
+                            }
+                          } else {
+                            const res = await fetch("/api/admin/disponibilidad", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ diaSemana: i, horaInicio: "00:00", horaFin: "23:59", disponible: false }),
+                            });
+                            if (res.ok) {
+                              const nuevo = await res.json();
+                              setBloques(prev => [...prev, nuevo]);
+                            }
+                          }
+                        }}
+                        className={`rounded-xl px-4 py-2 text-sm font-medium transition-all ${
+                          yaBloqueado
+                            ? "bg-red-100 text-red-700 ring-1 ring-red-200"
+                            : "bg-white text-gray-600 hover:bg-red-50 hover:text-red-600"
+                        }`}
+                      >
+                        {dia} {yaBloqueado ? "✕" : ""}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Lista de bloqueos activos */}
               <div>
-                <h3 className="mb-3 text-sm font-semibold text-gray-700">Bloques configurados</h3>
-                {bloques.length === 0 ? (
-                  <p className="text-sm text-gray-400">No hay bloques configurados.</p>
+                <h3 className="mb-3 text-sm font-semibold text-gray-700">Bloqueos activos ({bloques.filter(b => !b.disponible).length})</h3>
+                {bloques.filter(b => !b.disponible).length === 0 ? (
+                  <p className="text-sm text-gray-400">No tienes bloqueos. Estás disponible de 12:00 PM a 7:00 PM todos los días.</p>
                 ) : (
                   <div className="space-y-2">
-                    {bloques.map(b => {
-                      const diasNombres = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
-                      const esBloqueoDia = b.diaSemana === -1;
-                      const texto = esBloqueoDia
-                        ? `${new Date(b.fechaEspecifica + "T00:00:00").toLocaleDateString("es", { day: "numeric", month: "short", year: "numeric" })} (Bloqueado)`
-                        : `${diasNombres[b.diaSemana]} ${b.horaInicio}-${b.horaFin} (Disponible)`;
+                    {bloques.filter(b => !b.disponible).map(b => {
+                      const diasNombres = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+                      const esFechaEspecifica = b.diaSemana === -1;
+                      const esDiaCompleto = b.horaInicio === "00:00" && (b.horaFin === "23:59" || b.horaFin === "24:00");
+                      let texto = "";
+                      if (esFechaEspecifica) {
+                        const fecha = new Date(b.fechaEspecifica + "T00:00:00").toLocaleDateString("es", { weekday: "short", day: "numeric", month: "short" });
+                        texto = esDiaCompleto ? `${fecha} — Todo el día` : `${fecha} — ${b.horaInicio} a ${b.horaFin}`;
+                      } else {
+                        texto = `Todos los ${diasNombres[b.diaSemana]}`;
+                      }
                       return (
-                        <div key={b.id} className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-2.5">
-                          <span className={`text-sm ${esBloqueoDia ? "text-red-600 font-medium" : "text-gray-700"}`}>
-                            {texto}
-                          </span>
+                        <div key={b.id} className="flex items-center justify-between rounded-xl bg-red-50 px-4 py-2.5">
+                          <div className="flex items-center gap-2">
+                            <svg className="h-4 w-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                            </svg>
+                            <span className="text-sm font-medium text-red-700">{texto}</span>
+                          </div>
                           <button
                             onClick={async () => {
                               const res = await fetch("/api/admin/disponibilidad", {
@@ -827,15 +850,13 @@ export default function AdminPage() {
                                 headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify({ id: b.id }),
                               });
-                              if (res.ok) {
-                                setBloques(prev => prev.filter(x => x.id !== b.id));
-                              }
+                              if (res.ok) setBloques(prev => prev.filter(x => x.id !== b.id));
                             }}
-                            className="rounded-lg p-1.5 text-gray-400 transition-all hover:bg-red-50 hover:text-red-500"
-                            title="Eliminar"
+                            className="rounded-lg p-1.5 text-red-400 transition-all hover:bg-red-100 hover:text-red-600"
+                            title="Quitar bloqueo"
                           >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                           </button>
                         </div>

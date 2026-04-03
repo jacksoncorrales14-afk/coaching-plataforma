@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+// Horario base: 12:00 PM a 7:00 PM todos los días
+const HORA_INICIO = 12;
+const HORA_FIN = 19;
+
 // GET /api/disponibilidad — horarios disponibles (próximos 30 días)
+// Lógica invertida: todo está disponible por defecto, los bloques son exclusiones
 export async function GET() {
   try {
-    // Obtener bloques de disponibilidad configurados
     const bloques = await prisma.bloqueHorario.findMany();
 
-    // Obtener videollamadas agendadas/confirmadas (ocupadas)
     const ahora = new Date();
     const en30Dias = new Date(ahora.getTime() + 30 * 86400000);
 
@@ -19,15 +22,21 @@ export async function GET() {
       select: { fechaPropuesta: true, duracion: true },
     });
 
-    // Generar slots disponibles para los próximos 30 días
     const slots: { fecha: string; horas: string[] }[] = [];
 
     for (let d = 1; d <= 30; d++) {
       const dia = new Date(ahora.getTime() + d * 86400000);
-      const diaSemana = dia.getDay(); // 0-6
-      const fechaStr = dia.toISOString().split("T")[0]; // YYYY-MM-DD
+      const diaSemana = dia.getDay(); // 0=domingo..6=sábado
+      const fechaStr = dia.toISOString().split("T")[0];
 
-      // Buscar bloqueos específicos para este día
+      // Verificar si este día de la semana está bloqueado recurrentemente
+      const diaBloqueadoRecurrente = bloques.some(
+        (b) => b.diaSemana === diaSemana && !b.disponible &&
+               b.horaInicio === "00:00" && (b.horaFin === "23:59" || b.horaFin === "24:00")
+      );
+      if (diaBloqueadoRecurrente) continue;
+
+      // Buscar bloqueos específicos para esta fecha
       const bloqueosDelDia = bloques.filter(
         (b) =>
           b.diaSemana === -1 &&
@@ -36,51 +45,47 @@ export async function GET() {
           !b.disponible
       );
 
-      // Si hay bloqueo de día completo (00:00-23:59), saltar
+      // Si hay bloqueo de día completo, saltar
       const bloqueoDiaCompleto = bloqueosDelDia.find(
         (b) => b.horaInicio === "00:00" && (b.horaFin === "23:59" || b.horaFin === "24:00")
       );
       if (bloqueoDiaCompleto) continue;
 
-      // Buscar disponibilidad para este día de la semana
-      const disponibilidadDia = bloques.filter(
-        (b) => b.diaSemana === diaSemana && b.disponible
-      );
-
-      if (disponibilidadDia.length === 0) continue; // Sin horarios configurados
-
-      // Generar slots de 1 hora dentro de los rangos disponibles
+      // Generar slots de 1 hora dentro del horario base (12-19)
       const horasDisponibles: string[] = [];
 
-      for (const bloque of disponibilidadDia) {
-        const [hI, mI] = bloque.horaInicio.split(":").map(Number);
-        const [hF] = bloque.horaFin.split(":").map(Number);
+      for (let h = HORA_INICIO; h < HORA_FIN; h++) {
+        const horaStr = `${h.toString().padStart(2, "0")}:00`;
+        const slotTime = new Date(`${fechaStr}T${horaStr}:00`);
 
-        for (let h = hI; h < hF; h++) {
-          const horaStr = `${h.toString().padStart(2, "0")}:${(mI || 0).toString().padStart(2, "0")}`;
-          const slotTime = new Date(`${fechaStr}T${horaStr}:00`);
+        // Verificar bloqueo por rango de horas en esta fecha
+        const bloqueadaPorRango = bloqueosDelDia.some((b) => {
+          const [bhi] = b.horaInicio.split(":").map(Number);
+          const [bhf] = b.horaFin.split(":").map(Number);
+          return h >= bhi && h < bhf;
+        });
+        if (bloqueadaPorRango) continue;
 
-          // Verificar que no esté bloqueada por rango de horas
-          const bloqueadaPorRango = bloqueosDelDia.some((b) => {
-            const [bhi] = b.horaInicio.split(":").map(Number);
-            const [bhf] = b.horaFin.split(":").map(Number);
-            return h >= bhi && h < bhf;
-          });
+        // Verificar bloqueo recurrente por rango de horas en este día de la semana
+        const bloqueadaRecurrente = bloques.some((b) => {
+          if (b.diaSemana !== diaSemana || b.disponible) return false;
+          if (b.horaInicio === "00:00" && (b.horaFin === "23:59" || b.horaFin === "24:00")) return false; // ya manejado arriba
+          const [bhi] = b.horaInicio.split(":").map(Number);
+          const [bhf] = b.horaFin.split(":").map(Number);
+          return h >= bhi && h < bhf;
+        });
+        if (bloqueadaRecurrente) continue;
 
-          if (bloqueadaPorRango) continue;
+        // Verificar que no esté ocupada por otra videollamada
+        const ocupada = ocupadas.some((o) => {
+          if (!o.fechaPropuesta) return false;
+          const oTime = new Date(o.fechaPropuesta).getTime();
+          const diff = Math.abs(slotTime.getTime() - oTime);
+          return diff < (o.duracion || 30) * 60000;
+        });
+        if (ocupada) continue;
 
-          // Verificar que no esté ocupada por otra videollamada
-          const ocupada = ocupadas.some((o) => {
-            if (!o.fechaPropuesta) return false;
-            const oTime = new Date(o.fechaPropuesta).getTime();
-            const diff = Math.abs(slotTime.getTime() - oTime);
-            return diff < (o.duracion || 30) * 60000;
-          });
-
-          if (!ocupada) {
-            horasDisponibles.push(horaStr);
-          }
-        }
+        horasDisponibles.push(horaStr);
       }
 
       if (horasDisponibles.length > 0) {
