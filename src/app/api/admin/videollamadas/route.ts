@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { parseBody, adminVideollamadaSchema } from "@/lib/validations";
+import { parseBody, adminVideollamadaSchema, deleteByIdSchema } from "@/lib/validations";
 import { enviarConfirmacionVideollamada } from "@/lib/email";
 
 // GET /api/admin/videollamadas — listar todas
@@ -96,6 +96,24 @@ export async function PUT(req: NextRequest) {
     }
 
     return NextResponse.json({ error: "Acción no válida" }, { status: 400 });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
+  }
+}
+
+// DELETE /api/admin/videollamadas — eliminar solicitud
+export async function DELETE(req: NextRequest) {
+  try {
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
+
+    const { data, error: valError } = parseBody(deleteByIdSchema, await req.json());
+    if (valError) return valError;
+
+    await prisma.videollamada.delete({ where: { id: data.id } });
+
+    return NextResponse.json({ ok: true });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });

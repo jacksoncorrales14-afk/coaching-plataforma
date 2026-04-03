@@ -82,6 +82,9 @@ export default function AdminPage() {
     Array.from({ length: 7 }, () => ({ horaInicio: "12:00", horaFin: "19:00" }))
   );
   const [fechaBloqueo, setFechaBloqueo] = useState("");
+  const [horaBloqueoInicio, setHoraBloqueoInicio] = useState("");
+  const [horaBloqueoFin, setHoraBloqueoFin] = useState("");
+  const [bloqueoDiaCompleto, setBloqueoDiaCompleto] = useState(true);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -132,6 +135,18 @@ export default function AdminPage() {
     if (res.ok) {
       const updated = await res.json();
       setVideollamadas(prev => prev.map(v => v.id === id ? updated : v));
+    }
+  };
+
+  const handleEliminarVideollamada = async (id: string) => {
+    if (!confirm("¿Eliminar esta solicitud de videollamada?")) return;
+    const res = await fetch("/api/admin/videollamadas", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    if (res.ok) {
+      setVideollamadas(prev => prev.filter(v => v.id !== id));
     }
   };
 
@@ -719,24 +734,54 @@ export default function AdminPage() {
 
               {/* Bloquear fecha específica */}
               <div className="mb-6">
-                <h3 className="mb-3 text-sm font-semibold text-gray-700">Bloquear fecha especifica</h3>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="date"
-                    value={fechaBloqueo}
-                    onChange={e => setFechaBloqueo(e.target.value)}
-                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-wine-400 focus:outline-none focus:ring-1 focus:ring-wine-400"
-                  />
+                <h3 className="mb-3 text-sm font-semibold text-gray-700">Bloquear fecha específica</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="date"
+                      value={fechaBloqueo}
+                      onChange={e => setFechaBloqueo(e.target.value)}
+                      className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-wine-400 focus:outline-none focus:ring-1 focus:ring-wine-400"
+                    />
+                    <label className="flex items-center gap-2 text-sm text-gray-600">
+                      <input
+                        type="checkbox"
+                        checked={bloqueoDiaCompleto}
+                        onChange={e => setBloqueoDiaCompleto(e.target.checked)}
+                        className="rounded border-gray-300 text-wine-600 focus:ring-wine-500"
+                      />
+                      Día completo
+                    </label>
+                  </div>
+                  {!bloqueoDiaCompleto && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500">De</span>
+                      <input
+                        type="time"
+                        value={horaBloqueoInicio}
+                        onChange={e => setHoraBloqueoInicio(e.target.value)}
+                        className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-wine-400 focus:outline-none focus:ring-1 focus:ring-wine-400"
+                      />
+                      <span className="text-xs text-gray-500">a</span>
+                      <input
+                        type="time"
+                        value={horaBloqueoFin}
+                        onChange={e => setHoraBloqueoFin(e.target.value)}
+                        className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-wine-400 focus:outline-none focus:ring-1 focus:ring-wine-400"
+                      />
+                    </div>
+                  )}
                   <button
                     onClick={async () => {
                       if (!fechaBloqueo) return;
+                      if (!bloqueoDiaCompleto && (!horaBloqueoInicio || !horaBloqueoFin)) return;
                       const res = await fetch("/api/admin/disponibilidad", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
                           diaSemana: -1,
-                          horaInicio: "00:00",
-                          horaFin: "23:59",
+                          horaInicio: bloqueoDiaCompleto ? "00:00" : horaBloqueoInicio,
+                          horaFin: bloqueoDiaCompleto ? "23:59" : horaBloqueoFin,
                           disponible: false,
                           fechaEspecifica: fechaBloqueo,
                         }),
@@ -745,6 +790,9 @@ export default function AdminPage() {
                         const nuevo = await res.json();
                         setBloques(prev => [...prev, nuevo]);
                         setFechaBloqueo("");
+                        setHoraBloqueoInicio("");
+                        setHoraBloqueoFin("");
+                        setBloqueoDiaCompleto(true);
                       }
                     }}
                     className="rounded-lg bg-red-600 px-4 py-1.5 text-xs font-medium text-white transition-all hover:bg-red-700"
@@ -922,6 +970,16 @@ export default function AdminPage() {
                               </button>
                             </>
                           )}
+                          {/* Eliminar solicitud */}
+                          <button
+                            onClick={() => handleEliminarVideollamada(v.id)}
+                            className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-medium text-gray-400 transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-500"
+                            title="Eliminar solicitud"
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
                         </div>
                       </div>
                     );

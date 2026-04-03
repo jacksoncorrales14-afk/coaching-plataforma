@@ -27,8 +27,8 @@ export async function GET() {
       const diaSemana = dia.getDay(); // 0-6
       const fechaStr = dia.toISOString().split("T")[0]; // YYYY-MM-DD
 
-      // Buscar si hay un bloqueo específico para este día
-      const bloqueoEspecifico = bloques.find(
+      // Buscar bloqueos específicos para este día
+      const bloqueosDelDia = bloques.filter(
         (b) =>
           b.diaSemana === -1 &&
           b.fechaEspecifica &&
@@ -36,7 +36,11 @@ export async function GET() {
           !b.disponible
       );
 
-      if (bloqueoEspecifico) continue; // Día completamente bloqueado
+      // Si hay bloqueo de día completo (00:00-23:59), saltar
+      const bloqueoDiaCompleto = bloqueosDelDia.find(
+        (b) => b.horaInicio === "00:00" && (b.horaFin === "23:59" || b.horaFin === "24:00")
+      );
+      if (bloqueoDiaCompleto) continue;
 
       // Buscar disponibilidad para este día de la semana
       const disponibilidadDia = bloques.filter(
@@ -56,7 +60,16 @@ export async function GET() {
           const horaStr = `${h.toString().padStart(2, "0")}:${(mI || 0).toString().padStart(2, "0")}`;
           const slotTime = new Date(`${fechaStr}T${horaStr}:00`);
 
-          // Verificar que no esté ocupada
+          // Verificar que no esté bloqueada por rango de horas
+          const bloqueadaPorRango = bloqueosDelDia.some((b) => {
+            const [bhi] = b.horaInicio.split(":").map(Number);
+            const [bhf] = b.horaFin.split(":").map(Number);
+            return h >= bhi && h < bhf;
+          });
+
+          if (bloqueadaPorRango) continue;
+
+          // Verificar que no esté ocupada por otra videollamada
           const ocupada = ocupadas.some((o) => {
             if (!o.fechaPropuesta) return false;
             const oTime = new Date(o.fechaPropuesta).getTime();
