@@ -2,27 +2,30 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 
 async function getStats() {
-  const totalCursos = await prisma.clase.count({ where: { publicada: true } });
-  return { totalCursos };
+  const [totalCursos, totalProgramas] = await Promise.all([
+    prisma.clase.count({ where: { publicada: true } }),
+    prisma.programa.count({ where: { publicado: true } }),
+  ]);
+  return { totalCursos, totalProgramas };
 }
 
 export default async function Home() {
-  const { totalCursos } = await getStats();
+  const { totalCursos, totalProgramas } = await getStats();
 
   const comentarios = [
     {
-      nombre: "Maria G.",
-      texto: "La membresia cambio mi forma de ver el marketing. Los cursos son claros, practicos y puedo verlos cuando quiera.",
+      nombre: "María G.",
+      texto: "La membresía cambió mi forma de ver el marketing. Los cursos son claros, prácticos y puedo verlos cuando quiera.",
       avatar: "M",
     },
     {
       nombre: "Laura P.",
-      texto: "Los cursos no solo me ayudaron a crecer profesionalmente, sino que tambien me impulsaron a crecer como persona de forma integral. Deby te transforma por completo.",
+      texto: "Los cursos no solo me ayudaron a crecer profesionalmente, sino que también me impulsaron a crecer como persona de forma integral. Deby te transforma por completo.",
       avatar: "L",
     },
     {
       nombre: "Andrea R.",
-      texto: "Deby explica de una forma que realmente entiendes. Mi negocio crecio un 40% desde que empece con sus cursos.",
+      texto: "Deby explica de una forma que realmente entiendes. Mi negocio creció un 40% desde que empecé con sus cursos.",
       avatar: "A",
     },
   ];
@@ -45,15 +48,22 @@ export default async function Home() {
                 <span className="text-nude-200">Aprende para siempre.</span>
               </h1>
               <p className="mx-auto mb-10 max-w-xl text-lg text-wine-100">
-                Una membresia que te abre las puertas a todos nuestros cursos.
-                Sin limites, sin sorpresas, hasta que asi lo decidas.
+                Una membresía que abre las puertas a todos nuestros cursos, programas
+                y secretos para monetizar tu negocio. Sin límites, con muchas sorpresas
+                y hasta que así lo decidas.
               </p>
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Link
                   href="/membresia"
                   className="inline-flex items-center justify-center rounded-lg bg-white px-8 py-4 text-base font-semibold text-wine-600 shadow-lg transition-all hover:bg-nude-50 hover:shadow-xl"
                 >
-                  Membresia
+                  Membresía
+                </Link>
+                <Link
+                  href="/programas"
+                  className="inline-flex items-center justify-center rounded-lg border-2 border-white/30 px-8 py-4 text-base font-semibold text-white transition-all hover:border-white hover:bg-white/10"
+                >
+                  Programas
                 </Link>
                 <Link
                   href="/clases"
@@ -80,9 +90,11 @@ export default async function Home() {
               </p>
             </div>
             <div className="text-center">
-              <p className="text-4xl font-extrabold text-wine-600">24/7</p>
+              <p className="text-4xl font-extrabold text-wine-600">
+                {totalProgramas}+
+              </p>
               <p className="mt-2 text-sm font-medium text-gray-500">
-                Acceso ilimitado, cuando quieras
+                Programas por niveles
               </p>
             </div>
             <div className="text-center">
@@ -113,18 +125,18 @@ export default async function Home() {
                   Recomendado
                 </div>
                 <h3 className="mb-3 text-2xl font-bold text-gray-900">
-                  Membresia
+                  Membresía
                 </h3>
                 <p className="mb-6 text-gray-500">
-                  Acceso total a todos los cursos actuales y futuros.
-                  Paga mensual o anual y aprende sin limites.
+                  Acceso total a todos los cursos, programas y contenido exclusivo.
+                  Paga mensual o trimestral y aprende sin límites.
                 </p>
                 <ul className="mb-8 space-y-3">
                   <li className="flex items-center gap-3 text-sm text-gray-700">
                     <svg className="h-5 w-5 flex-shrink-0 text-wine-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    Todos los cursos incluidos
+                    Todos los cursos y programas incluidos
                   </li>
                   <li className="flex items-center gap-3 text-sm text-gray-700">
                     <svg className="h-5 w-5 flex-shrink-0 text-wine-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -136,7 +148,7 @@ export default async function Home() {
                     <svg className="h-5 w-5 flex-shrink-0 text-wine-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    Cursos nuevos cada mes
+                    Contenido nuevo cada mes
                   </li>
                   <li className="flex items-center gap-3 text-sm text-gray-700">
                     <svg className="h-5 w-5 flex-shrink-0 text-wine-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -146,7 +158,7 @@ export default async function Home() {
                   </li>
                 </ul>
                 <Link href="/membresia" className="btn-primary w-full py-4 text-center">
-                  Quiero la Membresia
+                  Quiero la Membresía
                 </Link>
               </div>
             </div>
@@ -162,7 +174,7 @@ export default async function Home() {
                   Cursos individuales
                 </h3>
                 <p className="mb-6 text-gray-500">
-                  Compra solo los cursos que necesitas. Pago unico
+                  Compra solo los cursos que necesitas. Pago único
                   y accede las veces que quieras durante un mes.
                 </p>
                 <ul className="mb-8 space-y-3">
@@ -176,7 +188,7 @@ export default async function Home() {
                     <svg className="h-5 w-5 flex-shrink-0 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    Pago unico por curso
+                    Pago único por curso
                   </li>
                   <li className="flex items-center gap-3 text-sm text-gray-700">
                     <svg className="h-5 w-5 flex-shrink-0 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -188,7 +200,7 @@ export default async function Home() {
                     <svg className="h-5 w-5 flex-shrink-0 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    Ideal si buscas algo especifico
+                    Ideal si buscas algo específico
                   </li>
                 </ul>
                 <Link href="/clases" className="btn-secondary w-full py-4 text-center">
@@ -207,7 +219,7 @@ export default async function Home() {
             Lo que dicen nuestras alumnas
           </h2>
           <p className="mx-auto mb-14 max-w-xl text-center text-gray-500">
-            Comentarios reales del foro de la membresia
+            Comentarios reales del foro de la membresía
           </p>
           <div className="grid gap-6 md:grid-cols-3">
             {comentarios.map((c, i) => (
@@ -222,6 +234,7 @@ export default async function Home() {
                       className="h-4 w-4 text-wine-600"
                       fill="currentColor"
                       viewBox="0 0 20 20"
+                      aria-hidden="true"
                     >
                       <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                     </svg>
@@ -251,18 +264,24 @@ export default async function Home() {
         <div className="absolute -right-20 bottom-0 h-64 w-64 rounded-full bg-wine-900/20 blur-[100px]" />
         <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6">
           <h2 className="mb-4 text-3xl font-bold text-white">
-            Tu siguiente paso empieza aqui
+            Tu siguiente paso empieza aquí
           </h2>
           <p className="mb-10 text-lg text-wine-100">
-            Unete a cientos de emprendedoras que ya estan transformando su
-            negocio con nuestros cursos.
+            Únete a cientos de emprendedoras que ya están transformando su
+            negocio con nuestros cursos y programas.
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link
               href="/membresia"
               className="inline-flex items-center justify-center rounded-lg bg-white px-8 py-4 text-base font-semibold text-wine-600 shadow-lg transition-all hover:bg-nude-50 hover:shadow-xl"
             >
-              Obtener Membresia
+              Obtener Membresía
+            </Link>
+            <Link
+              href="/programas"
+              className="inline-flex items-center justify-center rounded-lg border-2 border-white/30 px-8 py-4 text-base font-semibold text-white transition-all hover:border-white hover:bg-white/10"
+            >
+              Ver Programas
             </Link>
             <Link
               href="/clases"
