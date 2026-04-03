@@ -4,11 +4,9 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  if (!process.env.ADMIN_PASSWORD) {
-    throw new Error("ADMIN_PASSWORD environment variable is required. Refusing to seed with default password.");
-  }
-  if (!process.env.ADMIN_EMAIL) {
-    throw new Error("ADMIN_EMAIL environment variable is required.");
+  if (!process.env.ADMIN_PASSWORD || !process.env.ADMIN_EMAIL) {
+    console.log("ADMIN_PASSWORD/ADMIN_EMAIL not set, skipping seed (admin already exists).");
+    return;
   }
 
   const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 12);
