@@ -6,8 +6,9 @@ import { Avatar } from "@/components/Avatar";
 import { CursosTab } from "@/components/dashboard/CursosTab";
 import { ProgramasTab } from "@/components/dashboard/ProgramasTab";
 import { ComunidadTab } from "@/components/dashboard/ComunidadTab";
+import { VideollamadaTab } from "@/components/dashboard/VideollamadaTab";
 
-type Tab = "cursos" | "programas" | "comunidad";
+type Tab = "cursos" | "programas" | "comunidad" | "videollamada";
 
 interface Clase {
   id: string;
@@ -58,6 +59,9 @@ export default function DashboardPage() {
   const [clases, setClases] = useState<Clase[]>([]);
   const [programas, setProgramas] = useState<any[]>([]);
   const [comentarios, setComentarios] = useState<ComentarioInfo[]>([]);
+  const [videollamadas, setVideollamadas] = useState<any[]>([]);
+  const [videollamadaPrecio, setVideollamadaPrecio] = useState(50);
+  const [videollamadaActiva, setVideollamadaActiva] = useState(true);
   const [subiendoAvatar, setSubiendoAvatar] = useState(false);
   const [nombreGuardado, setNombreGuardado] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -78,7 +82,8 @@ export default function DashboardPage() {
       fetch("/api/clases", opts).then(r => r.json()),
       fetch("/api/comunidad", opts).then(r => r.json()).catch((e) => { if (e.name !== "AbortError") return []; console.error(e); return []; }),
       fetch("/api/programas", opts).then(r => r.json()).catch((e) => { if (e.name !== "AbortError") return []; console.error(e); return []; }),
-    ]).then(([memData, perfilData, clasesData, comData, progData]) => {
+      fetch(`/api/videollamada?email=${encodeURIComponent(savedEmail)}`, opts).then(r => r.ok ? r.json() : { videollamadas: [], precio: 50, activa: true }).catch(() => ({ videollamadas: [], precio: 50, activa: true })),
+    ]).then(([memData, perfilData, clasesData, comData, progData, videoData]) => {
       if (!memData.activa) { router.push("/mi-cuenta"); return; }
       setMembresia(memData);
       setPerfil(perfilData);
@@ -86,6 +91,9 @@ export default function DashboardPage() {
       setClases(Array.isArray(clasesData) ? clasesData : []);
       setComentarios(Array.isArray(comData) ? comData : []);
       setProgramas(Array.isArray(progData) ? progData : []);
+      setVideollamadas(videoData.videollamadas || []);
+      setVideollamadaPrecio(videoData.precio || 50);
+      setVideollamadaActiva(videoData.activa ?? true);
       setLoading(false);
     }).catch((e) => { if (e.name !== "AbortError") console.error(e); });
 
@@ -140,6 +148,7 @@ export default function DashboardPage() {
     { key: "cursos", label: "Cursos", icon: <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg> },
     { key: "programas", label: "Programas", icon: <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg> },
     { key: "comunidad", label: "Comunidad", icon: <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" /></svg> },
+    { key: "videollamada", label: "Videollamada", icon: <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> },
   ];
 
   return (
@@ -239,6 +248,18 @@ export default function DashboardPage() {
               setNombreGuardado={setNombreGuardado}
               setPerfil={setPerfil}
               onGuardarPerfil={handleGuardarPerfil}
+            />
+          </div>
+        )}
+        {tab === "videollamada" && (
+          <div id="tabpanel-videollamada" role="tabpanel" aria-labelledby="tab-videollamada">
+            <VideollamadaTab
+              email={email}
+              nombre={perfil.nombre}
+              videollamadas={videollamadas}
+              setVideollamadas={setVideollamadas}
+              precio={videollamadaPrecio}
+              activa={videollamadaActiva}
             />
           </div>
         )}

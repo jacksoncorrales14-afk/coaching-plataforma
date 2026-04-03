@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
-type Seccion = "dashboard" | "cursos" | "programas" | "membresias" | "comunidad";
+type Seccion = "dashboard" | "cursos" | "programas" | "membresias" | "comunidad" | "videollamadas";
 
 interface ClaseStats {
   id: string;
@@ -72,6 +72,10 @@ export default function AdminPage() {
   const [comentarios, setComentarios] = useState<ComentarioAdmin[]>([]);
   const [programas, setProgramas] = useState<ProgramaAdmin[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [videollamadas, setVideollamadas] = useState<any[]>([]);
+  const [configPrecio, setConfigPrecio] = useState(50);
+  const [configActiva, setConfigActiva] = useState(true);
+  const [editandoPrecio, setEditandoPrecio] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -86,12 +90,17 @@ export default function AdminPage() {
         fetch("/api/admin/stats").then(r => r.json()),
         fetch("/api/admin/comentarios").then(r => r.json()),
         fetch("/api/admin/programas").then(r => r.json()),
-      ]).then(([clasesData, memData, statsData, comData, progData]) => {
+        fetch("/api/admin/videollamadas").then(r => r.ok ? r.json() : []),
+        fetch("/api/admin/config").then(r => r.ok ? r.json() : { precioVideollamada: 50, videollamadaActiva: true }),
+      ]).then(([clasesData, memData, statsData, comData, progData, videoData, configData]) => {
         setClases(clasesData);
         setMembresias(Array.isArray(memData) ? memData : []);
         setStats(statsData);
         setComentarios(Array.isArray(comData) ? comData : []);
         setProgramas(Array.isArray(progData) ? progData : []);
+        setVideollamadas(Array.isArray(videoData) ? videoData : []);
+        setConfigPrecio(configData.precioVideollamada ?? 50);
+        setConfigActiva(configData.videollamadaActiva ?? true);
         setLoading(false);
       });
     }
@@ -105,6 +114,26 @@ export default function AdminPage() {
     });
     const res = await fetch("/api/admin/membresias");
     setMembresias(await res.json());
+  };
+
+  const handleAccionVideollamada = async (id: string, accion: string, extras?: Record<string, any>) => {
+    const res = await fetch("/api/admin/videollamadas", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, accion, ...extras }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setVideollamadas(prev => prev.map(v => v.id === id ? updated : v));
+    }
+  };
+
+  const handleGuardarConfig = async (campo: string, valor: any) => {
+    await fetch("/api/admin/config", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [campo]: valor }),
+    });
   };
 
   const handleEliminarComentario = async (id: string) => {
@@ -138,6 +167,7 @@ export default function AdminPage() {
     { key: "programas", label: "Programas", icon: "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" },
     { key: "membresias", label: "Membresias", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" },
     { key: "comunidad", label: "Comunidad", icon: "M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" },
+    { key: "videollamadas", label: "Videollamadas", icon: "M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" },
   ];
 
   const totalCodigos = clases.reduce((s, c) => s + c._count.codigos, 0);
@@ -538,6 +568,213 @@ export default function AdminPage() {
                     </button>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* VIDEOLLAMADAS */}
+        {seccion === "videollamadas" && (
+          <div>
+            <h1 className="mb-6 text-2xl font-bold text-gray-900">Videollamadas</h1>
+
+            {/* Configuración */}
+            <div className="mb-8 rounded-2xl bg-white p-6 shadow-sm">
+              <h2 className="mb-4 text-lg font-bold text-gray-900">Configuracion de videollamada</h2>
+              <div className="flex flex-wrap items-center gap-6">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-600">Precio:</span>
+                  {editandoPrecio ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={configPrecio}
+                        onChange={e => setConfigPrecio(Number(e.target.value))}
+                        className="w-24 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-wine-400 focus:outline-none focus:ring-1 focus:ring-wine-400"
+                      />
+                      <button
+                        onClick={async () => {
+                          await handleGuardarConfig("precioVideollamada", configPrecio);
+                          setEditandoPrecio(false);
+                        }}
+                        className="rounded-lg bg-wine-600 px-3 py-1.5 text-xs font-medium text-white transition-all hover:bg-wine-700"
+                      >
+                        Guardar
+                      </button>
+                      <button
+                        onClick={() => setEditandoPrecio(false)}
+                        className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-500 transition-all hover:bg-gray-50"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-gray-900">${configPrecio.toFixed(2)}</span>
+                      <button
+                        onClick={() => setEditandoPrecio(true)}
+                        className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-wine-600 transition-all hover:bg-wine-50"
+                      >
+                        Editar
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-600">Estado:</span>
+                  <button
+                    onClick={async () => {
+                      const nuevo = !configActiva;
+                      setConfigActiva(nuevo);
+                      await handleGuardarConfig("videollamadaActiva", nuevo);
+                    }}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      configActiva ? "bg-green-500" : "bg-gray-300"
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        configActiva ? "translate-x-6" : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+                  <span className={`text-xs font-medium ${configActiva ? "text-green-600" : "text-gray-400"}`}>
+                    {configActiva ? "Activa" : "Inactiva"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Solicitudes */}
+            <h2 className="mb-4 text-lg font-bold text-gray-900">
+              Solicitudes ({videollamadas.length})
+            </h2>
+            {videollamadas.length === 0 ? (
+              <div className="rounded-2xl bg-white p-10 text-center shadow-sm">
+                <p className="text-gray-400">No hay solicitudes de videollamada.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {[...videollamadas]
+                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                  .map(v => {
+                    const badgeColors: Record<string, string> = {
+                      pendiente_pago: "bg-yellow-100 text-yellow-700",
+                      pagada: "bg-blue-100 text-blue-700",
+                      agendada: "bg-purple-100 text-purple-700",
+                      confirmada: "bg-green-100 text-green-700",
+                      completada: "bg-gray-100 text-gray-600",
+                      cancelada: "bg-red-100 text-red-600",
+                    };
+                    return (
+                      <div key={v.id} className="rounded-2xl bg-white p-5 shadow-sm">
+                        <div className="mb-3 flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold text-gray-900">{v.nombre}</span>
+                          <span className="text-xs text-gray-400">{v.email}</span>
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badgeColors[v.estado] || "bg-gray-100 text-gray-600"}`}>
+                            {v.estado?.replace("_", " ")}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            {new Date(v.createdAt).toLocaleDateString("es", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </div>
+
+                        {v.fechaPropuesta && (
+                          <p className="mb-1 text-xs text-gray-500">
+                            <span className="font-medium">Fecha propuesta:</span>{" "}
+                            {new Date(v.fechaPropuesta).toLocaleDateString("es", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        )}
+                        {v.fechaConfirmada && (
+                          <p className="mb-1 text-xs text-gray-500">
+                            <span className="font-medium">Fecha confirmada:</span>{" "}
+                            {new Date(v.fechaConfirmada).toLocaleDateString("es", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        )}
+                        {v.enlace && (
+                          <p className="mb-1 text-xs text-gray-500">
+                            <span className="font-medium">Enlace:</span>{" "}
+                            <a href={v.enlace} target="_blank" rel="noopener noreferrer" className="text-wine-600 underline hover:text-wine-700">{v.enlace}</a>
+                          </p>
+                        )}
+                        {v.mensaje && (
+                          <p className="mb-3 text-sm text-gray-600">{v.mensaje}</p>
+                        )}
+
+                        {/* Acciones */}
+                        <div className="mt-3 flex flex-wrap items-end gap-3">
+                          {v.estado === "pendiente_pago" && (
+                            <button
+                              onClick={() => handleAccionVideollamada(v.id, "marcar_pagada")}
+                              className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white transition-all hover:bg-blue-700"
+                            >
+                              Marcar como pagada
+                            </button>
+                          )}
+
+                          {v.estado === "agendada" && (
+                            <form
+                              onSubmit={e => {
+                                e.preventDefault();
+                                const form = e.target as HTMLFormElement;
+                                const fechaConfirmada = (form.elements.namedItem("fechaConfirmada") as HTMLInputElement).value;
+                                const enlace = (form.elements.namedItem("enlace") as HTMLInputElement).value;
+                                if (fechaConfirmada && enlace) {
+                                  handleAccionVideollamada(v.id, "confirmar", { fechaConfirmada, enlace });
+                                }
+                              }}
+                              className="flex flex-wrap items-end gap-2"
+                            >
+                              <div>
+                                <label className="mb-1 block text-[11px] font-medium text-gray-500">Fecha confirmada</label>
+                                <input
+                                  type="datetime-local"
+                                  name="fechaConfirmada"
+                                  required
+                                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-wine-400 focus:outline-none focus:ring-1 focus:ring-wine-400"
+                                />
+                              </div>
+                              <div>
+                                <label className="mb-1 block text-[11px] font-medium text-gray-500">Enlace de la reunion</label>
+                                <input
+                                  type="text"
+                                  name="enlace"
+                                  placeholder="https://meet.google.com/..."
+                                  required
+                                  className="w-64 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-wine-400 focus:outline-none focus:ring-1 focus:ring-wine-400"
+                                />
+                              </div>
+                              <button
+                                type="submit"
+                                className="rounded-lg bg-purple-600 px-4 py-2 text-xs font-medium text-white transition-all hover:bg-purple-700"
+                              >
+                                Confirmar
+                              </button>
+                            </form>
+                          )}
+
+                          {v.estado === "confirmada" && (
+                            <>
+                              <button
+                                onClick={() => handleAccionVideollamada(v.id, "completar")}
+                                className="rounded-lg bg-green-600 px-4 py-2 text-xs font-medium text-white transition-all hover:bg-green-700"
+                              >
+                                Marcar completada
+                              </button>
+                              <button
+                                onClick={() => handleAccionVideollamada(v.id, "cancelar")}
+                                className="rounded-lg border border-red-200 px-4 py-2 text-xs font-medium text-red-500 transition-all hover:bg-red-50"
+                              >
+                                Cancelar
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             )}
           </div>

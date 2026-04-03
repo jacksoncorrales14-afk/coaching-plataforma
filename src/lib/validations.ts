@@ -202,3 +202,28 @@ export const recuperarPasswordSchema = z.object({
 export const recuperarCodigoSchema = z.object({
   email: email,
 });
+
+// --- Videollamada ---
+export const crearVideollamadaSchema = z.object({
+  email: email,
+  nombre: nonEmpty,
+  mensaje: z.string().optional().default(""),
+});
+
+export const proponerFechaSchema = z.object({
+  fechaPropuesta: z.string().min(1, "Fecha requerida"),
+  mensaje: z.string().optional().default(""),
+});
+
+export const adminVideollamadaSchema = z.object({
+  id: nonEmpty,
+  accion: z.enum(["marcar_pagada", "confirmar", "completar", "cancelar"]),
+  fechaConfirmada: z.string().optional(),
+  enlace: z.string().optional(),
+  notasAdmin: z.string().optional(),
+});
+
+export const configPlataformaSchema = z.object({
+  precioVideollamada: z.number().min(0).optional(),
+  videollamadaActiva: z.boolean().optional(),
+});

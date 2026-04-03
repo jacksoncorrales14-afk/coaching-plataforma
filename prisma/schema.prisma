@@ -253,3 +253,40 @@ model Reaccion {
   @@unique([email, comentarioId])
   @@index([comentarioId])
 }
+
+// ─── VIDEOLLAMADAS ──────────────────────────────────────
+
+enum VideollamadaEstado {
+  pendiente_pago
+  pagada
+  agendada
+  confirmada
+  completada
+  cancelada
+}
+
+model Videollamada {
+  id              String             @id @default(cuid())
+  email           String
+  nombre          String
+  mensaje         String             @default("") @db.Text
+  fechaPropuesta  DateTime?
+  fechaConfirmada DateTime?
+  duracion        Int                @default(30) // minutos
+  enlace          String             @default("") // link de Zoom/Meet
+  estado          VideollamadaEstado @default(pendiente_pago)
+  notasAdmin      String             @default("") @db.Text
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([email])
+  @@index([estado])
+}
+
+// ─── CONFIGURACIÓN ──────────────────────────────────────
+
+model ConfigPlataforma {
+  id                  String  @id @default("config")
+  precioVideollamada  Float   @default(50)
+  videollamadaActiva  Boolean @default(true)
+}
