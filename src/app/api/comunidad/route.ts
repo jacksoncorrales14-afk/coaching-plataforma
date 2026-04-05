@@ -77,11 +77,15 @@ export async function POST(req: NextRequest) {
     const notiTipo = data.tipo === "programa" ? "comentario_programa" : "comentario_comunidad";
     const preview = data.contenido.trim().slice(0, 80);
     try {
+      const enlace =
+        data.tipo === "programa"
+          ? `/admin?seccion=comunidad&tipo=programa&refId=${encodeURIComponent(data.refId)}`
+          : `/admin?seccion=comunidad&tipo=comunidad&refId=general`;
       await prisma.notificacion.create({
         data: {
           tipo: notiTipo as any,
           mensaje: `${data.nombre.trim()}: "${preview}${data.contenido.length > 80 ? "..." : ""}"`,
-          enlace: data.tipo === "programa" ? `/admin?seccion=comunidad` : `/admin?seccion=comunidad`,
+          enlace,
           metadata: JSON.stringify({ email: data.email, tipo: data.tipo, refId: data.refId }),
         },
       });

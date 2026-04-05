@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -73,6 +73,7 @@ interface Stats {
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [seccion, setSeccion] = useState<Seccion>("dashboard");
   const [clases, setClases] = useState<ClaseStats[]>([]);
   const [membresias, setMembresias] = useState<MembresiaAdmin[]>([]);
@@ -170,6 +171,37 @@ export default function AdminPage() {
       body: JSON.stringify({ [campo]: valor }),
     });
   };
+
+  // Leer params de URL (para notificaciones que abren secciones especificas)
+  useEffect(() => {
+    if (loading) return;
+    const seccionParam = searchParams.get("seccion") as Seccion | null;
+    const tipoParam = searchParams.get("tipo");
+    const refIdParam = searchParams.get("refId");
+
+    if (seccionParam && ["dashboard", "cursos", "programas", "membresias", "comunidad", "videollamadas"].includes(seccionParam)) {
+      setSeccion(seccionParam);
+    }
+
+    // Si la URL incluye tipo y refId, abrir el foro correspondiente
+    if (seccionParam === "comunidad" && tipoParam && refIdParam) {
+      if (tipoParam === "programa") {
+        const prog = programas.find((p) => p.id === refIdParam);
+        handleAbrirForo({
+          tipo: "programa",
+          refId: refIdParam,
+          titulo: prog ? `Foro: ${prog.titulo}` : "Foro del programa",
+        });
+      } else if (tipoParam === "comunidad") {
+        handleAbrirForo({
+          tipo: "comunidad",
+          refId: "general",
+          titulo: "Comunidad general",
+        });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, loading, programas.length]);
 
   const handleSubirAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

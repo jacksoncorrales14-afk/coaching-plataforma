@@ -3,13 +3,14 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef, useCallback } from "react";
 
 interface Notificacion {
   id: string;
   tipo: "comentario_comunidad" | "comentario_programa" | "solicitud_videollamada";
   mensaje: string;
+  enlace: string;
   leida: boolean;
   createdAt: string;
 }
@@ -48,6 +49,7 @@ function NotifIcon({ tipo }: { tipo: Notificacion["tipo"] }) {
 
 export function Navbar() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const isAdmin = session?.user?.role === "admin";
   const pathname = usePathname();
@@ -120,6 +122,16 @@ export function Navbar() {
     }
   };
 
+  const handleClickNotificacion = (n: Notificacion) => {
+    // Marcar como leida (no esperamos respuesta para no retrasar navegacion)
+    if (!n.leida) marcarUna(n.id);
+    setShowNotif(false);
+    // Navegar al enlace asociado
+    if (n.enlace) {
+      router.push(n.enlace);
+    }
+  };
+
   const linkClass = (href: string) =>
     `rounded-full border px-5 py-2 text-sm font-medium shadow-sm transition-all ${
       pathname === href || pathname.startsWith(href + "/")
@@ -163,7 +175,7 @@ export function Navbar() {
           {notificaciones.map((n) => (
             <li key={n.id}>
               <button
-                onClick={() => !n.leida && marcarUna(n.id)}
+                onClick={() => handleClickNotificacion(n)}
                 className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50 ${
                   n.leida ? "opacity-60" : ""
                 }`}
