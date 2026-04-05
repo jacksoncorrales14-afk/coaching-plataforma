@@ -165,10 +165,46 @@ export const comentarioSchema = z.object({
   email: email,
   nombre: nonEmpty,
   avatar: z.string().optional().default(""),
-  contenido: nonEmpty,
+  contenido: z.string().optional().default(""),
+  mediaUrl: z.string().optional().default(""),
+  mediaTipo: z.enum(["imagen", "video", ""]).optional().default(""),
   tipo: z.enum(["curso", "programa", "comunidad"]).optional().default("comunidad"),
   refId: z.string().optional().default("general"),
   parentId: z.string().nullable().optional().default(null),
+}).refine((d) => d.contenido.trim().length > 0 || d.mediaUrl.length > 0, {
+  message: "Debe incluir texto o un archivo adjunto",
+  path: ["contenido"],
+});
+
+export const comentarioAdminSchema = z.object({
+  contenido: z.string().optional().default(""),
+  mediaUrl: z.string().optional().default(""),
+  mediaTipo: z.enum(["imagen", "video", ""]).optional().default(""),
+  tipo: z.enum(["curso", "programa", "comunidad"]),
+  refId: z.string(),
+  parentId: z.string().nullable().optional().default(null),
+}).refine((d) => d.contenido.trim().length > 0 || d.mediaUrl.length > 0, {
+  message: "Debe incluir texto o un archivo adjunto",
+  path: ["contenido"],
+});
+
+// --- Reuniones ---
+export const createReunionSchema = z.object({
+  programaId: nonEmpty,
+  titulo: nonEmpty,
+  descripcion: z.string().optional().default(""),
+  fecha: z.string().min(1), // ISO date string
+  enlace: z.string().optional().default(""),
+  videoUrl: z.string().optional().default(""),
+});
+
+export const updateReunionSchema = z.object({
+  id: nonEmpty,
+  titulo: z.string().optional(),
+  descripcion: z.string().optional(),
+  fecha: z.string().optional(),
+  enlace: z.string().optional(),
+  videoUrl: z.string().optional(),
 });
 
 // --- Reacciones ---

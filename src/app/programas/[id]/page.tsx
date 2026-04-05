@@ -71,6 +71,10 @@ export default function ProgramaPage() {
   const [nombreGuardado, setNombreGuardado] = useState(false);
   const [showForo, setShowForo] = useState(false);
 
+  // Reuniones del programa
+  const [reuniones, setReuniones] = useState<any[]>([]);
+  const [showReuniones, setShowReuniones] = useState(false);
+
   useEffect(() => {
     const savedEmail = localStorage.getItem("coach_email");
     const savedAuth = localStorage.getItem("coach_auth");
@@ -85,14 +89,16 @@ export default function ProgramaPage() {
 
     cargarPrograma(savedEmail, controller.signal);
 
-    // Cargar perfil y comentarios del foro del programa
+    // Cargar perfil, comentarios del foro y reuniones del programa
     Promise.all([
       fetch(`/api/perfil?email=${encodeURIComponent(savedEmail)}`, opts).then(r => r.json()),
       fetch(`/api/comunidad?tipo=programa&refId=${params.id}`, opts).then(r => r.json()).catch(() => []),
-    ]).then(([perfilData, comData]) => {
+      fetch(`/api/programas/${params.id}/reuniones?email=${encodeURIComponent(savedEmail)}`, opts).then(r => r.ok ? r.json() : []).catch(() => []),
+    ]).then(([perfilData, comData, reunData]) => {
       setPerfil(perfilData);
       setNombreGuardado(!!perfilData.nombre);
       setComentarios(Array.isArray(comData) ? comData : []);
+      setReuniones(Array.isArray(reunData) ? reunData : []);
     }).catch(e => { if (e.name !== "AbortError") console.error(e); });
 
     return () => controller.abort();
@@ -480,6 +486,115 @@ export default function ProgramaPage() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Reuniones del programa */}
+        <div className="mt-8">
+          <button
+            onClick={() => setShowReuniones(!showReuniones)}
+            className="flex w-full items-center justify-between rounded-2xl bg-white p-5 shadow-sm transition-all hover:shadow-md"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-wine-50">
+                <svg className="h-5 w-5 text-wine-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div className="text-left">
+                <h3 className="font-bold text-gray-900">Reuniones del programa</h3>
+                <p className="text-sm text-gray-500">
+                  {reuniones.length} {reuniones.length === 1 ? "reunion" : "reuniones"}
+                  {reuniones.some((r) => new Date(r.fecha).getTime() > Date.now()) && " · Hay proximas reuniones"}
+                </p>
+              </div>
+            </div>
+            <svg
+              className={`h-5 w-5 text-gray-400 transition-transform ${showReuniones ? "rotate-180" : ""}`}
+              fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {showReuniones && (
+            <div className="mt-4 space-y-4">
+              {reuniones.length === 0 ? (
+                <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
+                  <p className="text-sm text-gray-400">Todavia no hay reuniones agendadas para este programa.</p>
+                </div>
+              ) : (
+                reuniones.map((r) => {
+                  const fechaObj = new Date(r.fecha);
+                  const esPasada = fechaObj.getTime() < Date.now();
+                  const tieneVideo = !!r.videoUrl;
+                  const embed = tieneVideo ? getEmbedUrl(r.videoUrl) : null;
+                  return (
+                    <div key={r.id} className="rounded-2xl bg-white p-5 shadow-sm">
+                      <div className="mb-3 flex flex-wrap items-center gap-2">
+                        <h3 className="text-lg font-bold text-gray-900">{r.titulo}</h3>
+                        {!esPasada && (
+                          <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-blue-700">
+                            Proxima
+                          </span>
+                        )}
+                        {esPasada && tieneVideo && (
+                          <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-green-700">
+                            Grabacion disponible
+                          </span>
+                        )}
+                        {esPasada && !tieneVideo && (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-700">
+                            Grabacion en preparacion
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        {fechaObj.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                        {" · "}
+                        {fechaObj.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                      {r.descripcion && <p className="mt-2 text-sm text-gray-600">{r.descripcion}</p>}
+
+                      {/* Pre-evento: enlace para unirse */}
+                      {!esPasada && r.enlace && (
+                        <a
+                          href={r.enlace}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-4 inline-flex items-center gap-2 rounded-full bg-wine-600 px-5 py-2 text-sm font-semibold text-white transition-all hover:bg-wine-700"
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                          Unirme a la reunion
+                        </a>
+                      )}
+
+                      {/* Post-evento: reproductor de video */}
+                      {tieneVideo && (
+                        <div className="mt-4 overflow-hidden rounded-xl bg-black">
+                          {embed ? (
+                            <div className="relative aspect-video">
+                              <iframe
+                                src={embed}
+                                className="absolute inset-0 h-full w-full"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                              />
+                            </div>
+                          ) : (
+                            <a href={r.videoUrl} target="_blank" rel="noreferrer" className="block p-6 text-center text-sm text-white hover:bg-gray-900">
+                              Ver grabacion ({r.videoUrl})
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
 
         {/* Foro del programa */}

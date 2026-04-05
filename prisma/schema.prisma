@@ -140,6 +140,22 @@ model Programa {
   updatedAt   DateTime         @updatedAt
   niveles     Nivel[]
   accesos     AccesoPrograma[]
+  reuniones   ReunionPrograma[]
+}
+
+model ReunionPrograma {
+  id          String   @id @default(cuid())
+  programaId  String
+  programa    Programa @relation(fields: [programaId], references: [id], onDelete: Cascade)
+  titulo      String
+  descripcion String   @default("") @db.Text
+  fecha       DateTime // fecha y hora de la reunion
+  enlace      String   @default("") // link de Zoom/Meet (pre-evento)
+  videoUrl    String   @default("") // URL YouTube/Vimeo (post-evento)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([programaId])
 }
 
 model AccesoPrograma {
@@ -244,6 +260,9 @@ model Comentario {
   nombre       String
   avatar       String        @default("")
   contenido    String        @db.Text
+  mediaUrl     String        @default("")
+  mediaTipo    String        @default("") // "imagen" | "video" | ""
+  esAdmin      Boolean       @default(false)
   tipo         ComentarioTipo
   refId        String        // ID del curso, programa o "general"
   parentId     String?       // para respuestas

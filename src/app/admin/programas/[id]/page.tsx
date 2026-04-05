@@ -21,6 +21,15 @@ interface Nivel {
   videos: Video[];
 }
 
+interface Reunion {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  fecha: string;
+  enlace: string;
+  videoUrl: string;
+}
+
 interface Programa {
   id: string;
   titulo: string;
@@ -31,6 +40,7 @@ interface Programa {
   publicado: boolean;
   foroNombre: string;
   niveles: Nivel[];
+  reuniones: Reunion[];
 }
 
 export default function EditarProgramaPage() {
@@ -58,6 +68,18 @@ export default function EditarProgramaPage() {
   const [nuevaTareaVideoId, setNuevaTareaVideoId] = useState<string | null>(null);
   const [nuevaTareaTitulo, setNuevaTareaTitulo] = useState("");
   const [nuevaTareaDesc, setNuevaTareaDesc] = useState("");
+
+  // Reuniones
+  const [nuevaReunionTitulo, setNuevaReunionTitulo] = useState("");
+  const [nuevaReunionDesc, setNuevaReunionDesc] = useState("");
+  const [nuevaReunionFecha, setNuevaReunionFecha] = useState("");
+  const [nuevaReunionEnlace, setNuevaReunionEnlace] = useState("");
+  const [editandoReunionId, setEditandoReunionId] = useState<string | null>(null);
+  const [editReunionTitulo, setEditReunionTitulo] = useState("");
+  const [editReunionDesc, setEditReunionDesc] = useState("");
+  const [editReunionFecha, setEditReunionFecha] = useState("");
+  const [editReunionEnlace, setEditReunionEnlace] = useState("");
+  const [editReunionVideoUrl, setEditReunionVideoUrl] = useState("");
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -180,6 +202,68 @@ export default function EditarProgramaPage() {
     setNuevaTareaTitulo("");
     setNuevaTareaDesc("");
     setNuevaTareaVideoId(null);
+    await cargarPrograma();
+  };
+
+  const handleCrearReunion = async () => {
+    if (!nuevaReunionTitulo.trim() || !nuevaReunionFecha) return;
+    await fetch("/api/admin/reuniones", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        programaId: programa!.id,
+        titulo: nuevaReunionTitulo.trim(),
+        descripcion: nuevaReunionDesc.trim(),
+        fecha: new Date(nuevaReunionFecha).toISOString(),
+        enlace: nuevaReunionEnlace.trim(),
+      }),
+    });
+    setNuevaReunionTitulo("");
+    setNuevaReunionDesc("");
+    setNuevaReunionFecha("");
+    setNuevaReunionEnlace("");
+    await cargarPrograma();
+  };
+
+  const iniciarEdicionReunion = (r: Reunion) => {
+    setEditandoReunionId(r.id);
+    setEditReunionTitulo(r.titulo);
+    setEditReunionDesc(r.descripcion);
+    // fecha en formato para input datetime-local
+    const d = new Date(r.fecha);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    setEditReunionFecha(
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+    );
+    setEditReunionEnlace(r.enlace);
+    setEditReunionVideoUrl(r.videoUrl);
+  };
+
+  const handleGuardarEdicionReunion = async () => {
+    if (!editandoReunionId) return;
+    await fetch("/api/admin/reuniones", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: editandoReunionId,
+        titulo: editReunionTitulo.trim(),
+        descripcion: editReunionDesc.trim(),
+        fecha: new Date(editReunionFecha).toISOString(),
+        enlace: editReunionEnlace.trim(),
+        videoUrl: editReunionVideoUrl.trim(),
+      }),
+    });
+    setEditandoReunionId(null);
+    await cargarPrograma();
+  };
+
+  const handleEliminarReunion = async (id: string) => {
+    if (!confirm("Eliminar esta reunion?")) return;
+    await fetch("/api/admin/reuniones", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
     await cargarPrograma();
   };
 
@@ -430,6 +514,153 @@ export default function EditarProgramaPage() {
             >
               + Agregar Nivel
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Reuniones del programa */}
+      <div className="mb-8">
+        <h2 className="mb-2 text-lg font-bold text-gray-900">Reuniones del programa ({programa.reuniones?.length || 0})</h2>
+        <p className="mb-4 text-sm text-gray-500">
+          Agenda reuniones grupales. Todas las alumnas con acceso al programa podran verlas, sin importar cuando compraron.
+        </p>
+
+        <div className="space-y-3">
+          {(programa.reuniones || []).map((r) => {
+            const fechaObj = new Date(r.fecha);
+            const esPasada = fechaObj.getTime() < Date.now();
+            const tieneVideo = !!r.videoUrl;
+            return (
+              <div key={r.id} className="rounded-2xl bg-white p-5 shadow-sm">
+                {editandoReunionId === r.id ? (
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      value={editReunionTitulo}
+                      onChange={(e) => setEditReunionTitulo(e.target.value)}
+                      placeholder="Titulo"
+                      className="input-field"
+                    />
+                    <textarea
+                      value={editReunionDesc}
+                      onChange={(e) => setEditReunionDesc(e.target.value)}
+                      placeholder="Descripcion (opcional)"
+                      className="input-field min-h-[60px]"
+                    />
+                    <input
+                      type="datetime-local"
+                      value={editReunionFecha}
+                      onChange={(e) => setEditReunionFecha(e.target.value)}
+                      className="input-field"
+                    />
+                    <input
+                      type="text"
+                      value={editReunionEnlace}
+                      onChange={(e) => setEditReunionEnlace(e.target.value)}
+                      placeholder="Enlace de Zoom/Meet (pre-evento)"
+                      className="input-field"
+                    />
+                    <input
+                      type="text"
+                      value={editReunionVideoUrl}
+                      onChange={(e) => setEditReunionVideoUrl(e.target.value)}
+                      placeholder="URL de YouTube/Vimeo (grabacion post-evento)"
+                      className="input-field"
+                    />
+                    <div className="flex gap-2">
+                      <button onClick={handleGuardarEdicionReunion} className="btn-primary px-4 py-2">Guardar</button>
+                      <button onClick={() => setEditandoReunionId(null)} className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-500 hover:bg-gray-50">Cancelar</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="mb-1 flex flex-wrap items-center gap-2">
+                        <h3 className="font-bold text-gray-900">{r.titulo}</h3>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
+                          tieneVideo
+                            ? "bg-green-100 text-green-700"
+                            : esPasada
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-blue-100 text-blue-700"
+                        }`}>
+                          {tieneVideo ? "Grabacion lista" : esPasada ? "Sin grabacion" : "Proxima"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        {fechaObj.toLocaleDateString("es", { day: "numeric", month: "long", year: "numeric" })} · {fechaObj.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                      {r.descripcion && <p className="mt-2 text-sm text-gray-600">{r.descripcion}</p>}
+                      {r.enlace && (
+                        <p className="mt-1 text-xs text-gray-400 truncate">
+                          Enlace: <span className="text-wine-600">{r.enlace}</span>
+                        </p>
+                      )}
+                      {r.videoUrl && (
+                        <p className="mt-1 text-xs text-gray-400 truncate">
+                          Video: <span className="text-wine-600">{r.videoUrl}</span>
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <button
+                        onClick={() => iniciarEdicionReunion(r)}
+                        className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleEliminarReunion(r.id)}
+                        className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Agregar nueva reunion */}
+        <div className="mt-4 rounded-2xl border-2 border-dashed border-gray-200 p-5">
+          <p className="mb-3 text-sm font-semibold text-gray-700">Agendar nueva reunion</p>
+          <div className="space-y-2">
+            <input
+              type="text"
+              value={nuevaReunionTitulo}
+              onChange={(e) => setNuevaReunionTitulo(e.target.value)}
+              placeholder="Titulo de la reunion"
+              className="input-field"
+            />
+            <textarea
+              value={nuevaReunionDesc}
+              onChange={(e) => setNuevaReunionDesc(e.target.value)}
+              placeholder="Descripcion (opcional)"
+              className="input-field min-h-[60px]"
+            />
+            <input
+              type="datetime-local"
+              value={nuevaReunionFecha}
+              onChange={(e) => setNuevaReunionFecha(e.target.value)}
+              className="input-field"
+            />
+            <input
+              type="text"
+              value={nuevaReunionEnlace}
+              onChange={(e) => setNuevaReunionEnlace(e.target.value)}
+              placeholder="Enlace de Zoom/Meet (opcional)"
+              className="input-field"
+            />
+            <button
+              onClick={handleCrearReunion}
+              disabled={!nuevaReunionTitulo.trim() || !nuevaReunionFecha}
+              className="btn-primary px-4 py-2"
+            >
+              + Agendar reunion
+            </button>
+            <p className="text-xs text-gray-400">Despues de la reunion, edita la entrada y agrega el URL de YouTube/Vimeo con la grabacion.</p>
           </div>
         </div>
       </div>

@@ -64,6 +64,8 @@ export async function POST(req: NextRequest) {
         nombre: data.nombre.trim(),
         avatar: data.avatar,
         contenido: data.contenido.trim(),
+        mediaUrl: data.mediaUrl,
+        mediaTipo: data.mediaTipo,
         tipo: data.tipo,
         refId: data.refId,
         parentId: data.parentId,

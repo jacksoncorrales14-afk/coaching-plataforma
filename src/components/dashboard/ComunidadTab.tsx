@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Avatar } from "@/components/Avatar";
 
 interface ReaccionInfo {
@@ -15,6 +15,9 @@ interface ComentarioInfo {
   nombre: string;
   avatar: string;
   contenido: string;
+  mediaUrl?: string;
+  mediaTipo?: string;
+  esAdmin?: boolean;
   createdAt: string;
   reacciones: ReaccionInfo[];
   respuestas: ComentarioInfo[];
@@ -40,6 +43,8 @@ interface ComunidadTabProps {
   refId?: string;
   titulo?: string;
   subtitulo?: string;
+  adminMode?: boolean; // Si true, postea a /api/admin/comentarios y puede eliminar
+  onEliminar?: (id: string) => void;
 }
 
 function tiempoRelativo(fecha: string) {
@@ -57,6 +62,12 @@ function tiempoRelativo(fecha: string) {
   });
 }
 
+interface AdjuntoPendiente {
+  url: string;
+  tipo: "imagen" | "video";
+  nombre: string;
+}
+
 export function ComunidadTab({
   email,
   perfil,
@@ -70,61 +81,121 @@ export function ComunidadTab({
   refId = "general",
   titulo = "Comunidad",
   subtitulo = "Comparte, pregunta y conecta con otras alumnas",
+  adminMode = false,
+  onEliminar,
 }: ComunidadTabProps) {
   const [nuevoComentario, setNuevoComentario] = useState("");
   const [respondiendo, setRespondiendo] = useState<string | null>(null);
   const [textoRespuesta, setTextoRespuesta] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [adjunto, setAdjunto] = useState<AdjuntoPendiente | null>(null);
+  const [adjuntoRespuesta, setAdjuntoRespuesta] = useState<AdjuntoPendiente | null>(null);
+  const [subiendo, setSubiendo] = useState(false);
+  const [errorUpload, setErrorUpload] = useState("");
+  const inputFileRef = useRef<HTMLInputElement>(null);
+  const inputFileRespRef = useRef<HTMLInputElement>(null);
 
-  const handleEnviarComentario = async () => {
-    if (!nuevoComentario.trim() || !perfil.nombre.trim()) return;
-    setEnviando(true);
-    const res = await fetch("/api/comunidad", {
+  const subirArchivo = async (file: File): Promise<AdjuntoPendiente | null> => {
+    setErrorUpload("");
+    setSubiendo(true);
+    const form = new FormData();
+    form.append("file", file);
+    form.append("email", email);
+    try {
+      const res = await fetch("/api/upload-comentario", { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorUpload(data.error || "Error al subir archivo");
+        return null;
+      }
+      return { url: data.url, tipo: data.tipo, nombre: file.name };
+    } catch {
+      setErrorUpload("Error al subir archivo");
+      return null;
+    } finally {
+      setSubiendo(false);
+    }
+  };
+
+  const handleSelectFile = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    target: "principal" | "respuesta"
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const res = await subirArchivo(file);
+    if (res) {
+      if (target === "principal") setAdjunto(res);
+      else setAdjuntoRespuesta(res);
+    }
+    e.target.value = "";
+  };
+
+  const postearComentario = async (body: any) => {
+    const endpoint = adminMode ? "/api/admin/comentarios" : "/api/comunidad";
+    const payload = adminMode
+      ? {
+          contenido: body.contenido,
+          mediaUrl: body.mediaUrl,
+          mediaTipo: body.mediaTipo,
+          tipo: body.tipo,
+          refId: body.refId,
+          parentId: body.parentId ?? null,
+        }
+      : body;
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email,
-        nombre: perfil.nombre,
-        avatar: perfil.avatar,
-        contenido: nuevoComentario.trim(),
-        tipo,
-        refId,
-      }),
+      body: JSON.stringify(payload),
+    });
+    return res;
+  };
+
+  const handleEnviarComentario = async () => {
+    if ((!nuevoComentario.trim() && !adjunto) || (!adminMode && !perfil.nombre.trim())) return;
+    setEnviando(true);
+    const res = await postearComentario({
+      email,
+      nombre: perfil.nombre,
+      avatar: perfil.avatar,
+      contenido: nuevoComentario.trim(),
+      mediaUrl: adjunto?.url || "",
+      mediaTipo: adjunto?.tipo || "",
+      tipo,
+      refId,
     });
     if (res.ok) {
       const nuevo = await res.json();
       setComentarios((prev) => [nuevo, ...prev]);
       setNuevoComentario("");
+      setAdjunto(null);
     }
     setEnviando(false);
   };
 
   const handleResponder = async (parentId: string) => {
-    if (!textoRespuesta.trim()) return;
+    if (!textoRespuesta.trim() && !adjuntoRespuesta) return;
     setEnviando(true);
-    const res = await fetch("/api/comunidad", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email,
-        nombre: perfil.nombre,
-        avatar: perfil.avatar,
-        contenido: textoRespuesta.trim(),
-        tipo,
-        refId,
-        parentId,
-      }),
+    const res = await postearComentario({
+      email,
+      nombre: perfil.nombre,
+      avatar: perfil.avatar,
+      contenido: textoRespuesta.trim(),
+      mediaUrl: adjuntoRespuesta?.url || "",
+      mediaTipo: adjuntoRespuesta?.tipo || "",
+      tipo,
+      refId,
+      parentId,
     });
     if (res.ok) {
       const resp = await res.json();
       setComentarios((prev) =>
         prev.map((c) =>
-          c.id === parentId
-            ? { ...c, respuestas: [...c.respuestas, resp] }
-            : c
+          c.id === parentId ? { ...c, respuestas: [...c.respuestas, resp] } : c
         )
       );
       setTextoRespuesta("");
+      setAdjuntoRespuesta(null);
       setRespondiendo(null);
     }
     setEnviando(false);
@@ -145,16 +216,53 @@ export function ComunidadTab({
             ...com,
             reacciones: yaReacciono
               ? com.reacciones.filter((r) => r.email !== email)
-              : [
-                  ...com.reacciones,
-                  { id: "temp", email, tipo: "corazon" },
-                ],
+              : [...com.reacciones, { id: "temp", email, tipo: "corazon" }],
           };
         };
         const updated = toggle(c);
         return { ...updated, respuestas: updated.respuestas.map(toggle) };
       })
     );
+  };
+
+  const handleEliminarLocal = async (id: string) => {
+    if (!confirm("Eliminar este comentario?")) return;
+    await fetch("/api/admin/comentarios", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    setComentarios((prev) =>
+      prev
+        .filter((c) => c.id !== id)
+        .map((c) => ({ ...c, respuestas: c.respuestas.filter((r) => r.id !== id) }))
+    );
+    if (onEliminar) onEliminar(id);
+  };
+
+  const renderMedia = (c: ComentarioInfo) => {
+    if (!c.mediaUrl) return null;
+    if (c.mediaTipo === "imagen") {
+      return (
+        <a href={c.mediaUrl} target="_blank" rel="noreferrer" className="mb-3 block">
+          <img
+            src={c.mediaUrl}
+            alt="Adjunto"
+            className="max-h-80 w-auto rounded-xl border border-gray-100"
+          />
+        </a>
+      );
+    }
+    if (c.mediaTipo === "video") {
+      return (
+        <video
+          src={c.mediaUrl}
+          controls
+          className="mb-3 max-h-80 w-full rounded-xl border border-gray-100 bg-black"
+        />
+      );
+    }
+    return null;
   };
 
   const renderComentario = (c: ComentarioInfo, esRespuesta = false) => {
@@ -164,24 +272,41 @@ export function ComunidadTab({
         <div
           className={`rounded-2xl bg-white p-5 shadow-sm transition-shadow hover:shadow-md ${
             esRespuesta ? "border-l-2 border-wine-200" : ""
-          }`}
+          } ${c.esAdmin ? "ring-1 ring-wine-200" : ""}`}
         >
           <div className="mb-3 flex items-start justify-between">
             <div className="flex items-center gap-3">
               <Avatar src={c.avatar} name={c.nombre} />
               <div>
-                <p className="text-sm font-semibold text-gray-900">
-                  {c.nombre}
-                </p>
-                <p className="text-xs text-gray-400">
-                  {tiempoRelativo(c.createdAt)}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-gray-900">{c.nombre}</p>
+                  {c.esAdmin && (
+                    <span className="rounded-full bg-wine-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                      Coach
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400">{tiempoRelativo(c.createdAt)}</p>
               </div>
             </div>
+            {adminMode && (
+              <button
+                onClick={() => handleEliminarLocal(c.id)}
+                className="rounded-lg p-1.5 text-gray-300 hover:bg-red-50 hover:text-red-500"
+                title="Eliminar"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            )}
           </div>
-          <p className="mb-4 text-sm leading-relaxed text-gray-600">
-            {c.contenido}
-          </p>
+          {c.contenido && (
+            <p className="mb-4 whitespace-pre-wrap text-sm leading-relaxed text-gray-600">
+              {c.contenido}
+            </p>
+          )}
+          {renderMedia(c)}
           <div className="flex items-center gap-4">
             <button
               onClick={() => handleReaccion(c.id)}
@@ -209,9 +334,7 @@ export function ComunidadTab({
             </button>
             {!esRespuesta && (
               <button
-                onClick={() =>
-                  setRespondiendo(respondiendo === c.id ? null : c.id)
-                }
+                onClick={() => setRespondiendo(respondiendo === c.id ? null : c.id)}
                 className="flex items-center gap-1.5 rounded-full bg-gray-50 px-3 py-1 text-xs font-medium text-gray-400 transition-all hover:bg-gray-100 hover:text-gray-600"
               >
                 <svg
@@ -236,27 +359,55 @@ export function ComunidadTab({
         </div>
         {!esRespuesta && c.respuestas.map((r) => renderComentario(r, true))}
         {respondiendo === c.id && (
-          <div className="ml-12 mt-3 flex gap-2">
-            <Avatar src={perfil.avatar} name={perfil.nombre} size="sm" />
-            <div className="flex-1">
+          <div className="ml-12 mt-3">
+            <div className="flex gap-2">
+              <Avatar src={perfil.avatar} name={perfil.nombre} size="sm" />
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={textoRespuesta}
+                  onChange={(e) => setTextoRespuesta(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleResponder(c.id)}
+                  placeholder="Escribe una respuesta..."
+                  className="w-full rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm transition-all focus:border-wine-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-wine-500/20"
+                />
+                {adjuntoRespuesta && (
+                  <div className="mt-2 flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-xs">
+                    <span className="font-medium text-gray-700">
+                      {adjuntoRespuesta.tipo === "imagen" ? "📷" : "🎬"} {adjuntoRespuesta.nombre}
+                    </span>
+                    <button
+                      onClick={() => setAdjuntoRespuesta(null)}
+                      className="text-gray-400 hover:text-red-500"
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                )}
+              </div>
               <input
-                type="text"
-                value={textoRespuesta}
-                onChange={(e) => setTextoRespuesta(e.target.value)}
-                onKeyDown={(e) =>
-                  e.key === "Enter" && handleResponder(c.id)
-                }
-                placeholder="Escribe una respuesta..."
-                className="w-full rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm transition-all focus:border-wine-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-wine-500/20"
+                ref={inputFileRespRef}
+                type="file"
+                accept="image/*,video/mp4,video/quicktime,video/webm"
+                onChange={(e) => handleSelectFile(e, "respuesta")}
+                className="hidden"
               />
+              <button
+                onClick={() => inputFileRespRef.current?.click()}
+                disabled={subiendo}
+                className="rounded-full bg-gray-100 px-3 py-2 text-xs text-gray-600 hover:bg-gray-200 disabled:opacity-50"
+                title="Adjuntar imagen o video"
+              >
+                📎
+              </button>
+              <button
+                onClick={() => handleResponder(c.id)}
+                disabled={enviando || (!textoRespuesta.trim() && !adjuntoRespuesta)}
+                className="rounded-full bg-wine-600 px-4 py-2 text-xs font-medium text-white transition-all hover:bg-wine-700 disabled:opacity-50"
+              >
+                Enviar
+              </button>
             </div>
-            <button
-              onClick={() => handleResponder(c.id)}
-              disabled={enviando || !textoRespuesta.trim()}
-              className="rounded-full bg-wine-600 px-4 py-2 text-xs font-medium text-white transition-all hover:bg-wine-700 disabled:opacity-50"
-            >
-              Enviar
-            </button>
           </div>
         )}
       </div>
@@ -273,7 +424,7 @@ export function ComunidadTab({
         <div className="flex gap-3">
           <Avatar src={perfil.avatar} name={perfil.nombre || "U"} />
           <div className="flex-1">
-            {!nombreGuardado && (
+            {!adminMode && !nombreGuardado && (
               <div className="mb-2 flex gap-2">
                 <input
                   type="text"
@@ -302,16 +453,50 @@ export function ComunidadTab({
               value={nuevoComentario}
               onChange={(e) => setNuevoComentario(e.target.value)}
               className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm transition-all placeholder:text-gray-400 focus:border-wine-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-wine-500/20"
-              placeholder="Que estas pensando? Comparte una idea, pregunta o experiencia..."
+              placeholder={
+                adminMode
+                  ? "Responde como Coach..."
+                  : "Que estas pensando? Comparte una idea, pregunta o experiencia..."
+              }
               rows={3}
             />
-            <div className="mt-2 flex justify-end">
+            {adjunto && (
+              <div className="mt-2 flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-xs">
+                <span className="font-medium text-gray-700">
+                  {adjunto.tipo === "imagen" ? "📷" : "🎬"} {adjunto.nombre}
+                </span>
+                <button
+                  onClick={() => setAdjunto(null)}
+                  className="text-gray-400 hover:text-red-500"
+                >
+                  Quitar
+                </button>
+              </div>
+            )}
+            {errorUpload && (
+              <p className="mt-2 text-xs text-red-500">{errorUpload}</p>
+            )}
+            <div className="mt-2 flex items-center justify-between">
+              <input
+                ref={inputFileRef}
+                type="file"
+                accept="image/*,video/mp4,video/quicktime,video/webm"
+                onChange={(e) => handleSelectFile(e, "principal")}
+                className="hidden"
+              />
+              <button
+                onClick={() => inputFileRef.current?.click()}
+                disabled={subiendo}
+                className="flex items-center gap-1.5 rounded-full bg-gray-100 px-4 py-2 text-xs font-medium text-gray-600 transition-all hover:bg-gray-200 disabled:opacity-50"
+              >
+                📎 {subiendo ? "Subiendo..." : "Adjuntar"}
+              </button>
               <button
                 onClick={handleEnviarComentario}
                 disabled={
                   enviando ||
-                  !nuevoComentario.trim() ||
-                  !perfil.nombre.trim()
+                  (!nuevoComentario.trim() && !adjunto) ||
+                  (!adminMode && !perfil.nombre.trim())
                 }
                 className="rounded-full bg-wine-600 px-5 py-2 text-sm font-medium text-white transition-all hover:bg-wine-700 disabled:opacity-50"
               >

@@ -5,8 +5,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { ComunidadTab } from "@/components/dashboard/ComunidadTab";
 
 type Seccion = "dashboard" | "cursos" | "programas" | "membresias" | "comunidad" | "videollamadas";
+
+interface ForoSeleccionado {
+  tipo: "comunidad" | "programa";
+  refId: string;
+  titulo: string;
+}
 
 interface ClaseStats {
   id: string;
@@ -84,6 +91,9 @@ export default function AdminPage() {
   const [horaBloqueoInicio, setHoraBloqueoInicio] = useState("");
   const [horaBloqueoFin, setHoraBloqueoFin] = useState("");
   const [bloqueoDiaCompleto, setBloqueoDiaCompleto] = useState(true);
+  const [foroSeleccionado, setForoSeleccionado] = useState<ForoSeleccionado | null>(null);
+  const [foroComentarios, setForoComentarios] = useState<any[]>([]);
+  const [foroLoading, setForoLoading] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -157,6 +167,15 @@ export default function AdminPage() {
     });
   };
 
+  const handleAbrirForo = async (f: ForoSeleccionado) => {
+    setForoSeleccionado(f);
+    setForoLoading(true);
+    const res = await fetch(`/api/comunidad?tipo=${f.tipo}&refId=${f.refId}`);
+    const data = await res.json();
+    setForoComentarios(Array.isArray(data) ? data : []);
+    setForoLoading(false);
+  };
+
   const handleEliminarComentario = async (id: string) => {
     if (!confirm("Eliminar este comentario?")) return;
     await fetch("/api/admin/comentarios", {
@@ -187,7 +206,7 @@ export default function AdminPage() {
     { key: "cursos", label: "Cursos", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
     { key: "programas", label: "Programas", icon: "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" },
     { key: "membresias", label: "Membresias", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" },
-    { key: "comunidad", label: "Comunidad", icon: "M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" },
+    { key: "comunidad", label: "Foros", icon: "M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" },
     { key: "videollamadas", label: "Videollamadas", icon: "M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" },
   ];
 
@@ -556,40 +575,118 @@ export default function AdminPage() {
         {/* COMUNIDAD */}
         {seccion === "comunidad" && (
           <div>
-            <h1 className="mb-6 text-2xl font-bold text-gray-900">
-              Moderar Comunidad ({comentarios.length})
-            </h1>
-            {comentarios.length === 0 ? (
-              <div className="rounded-2xl bg-white p-10 text-center shadow-sm">
-                <p className="text-gray-400">No hay comentarios aun.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {comentarios.map(c => (
-                  <div key={c.id} className="flex items-start justify-between rounded-2xl bg-white p-5 shadow-sm">
-                    <div className="flex-1">
-                      <div className="mb-2 flex items-center gap-2">
-                        <span className="text-sm font-semibold text-gray-900">{c.nombre}</span>
-                        <span className="text-xs text-gray-400">{c.email}</span>
-                        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-500">{c.tipo}</span>
-                        <span className="text-xs text-gray-400">
-                          {new Date(c.createdAt).toLocaleDateString("es", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600">{c.contenido}</p>
+            {!foroSeleccionado ? (
+              <>
+                <h1 className="mb-2 text-2xl font-bold text-gray-900">Foros</h1>
+                <p className="mb-6 text-sm text-gray-500">
+                  Selecciona un foro para ver los comentarios y responder como Coach
+                </p>
+
+                {/* Contadores por foro */}
+                {(() => {
+                  const contarPorForo = (tipo: string, refId: string) =>
+                    comentarios.filter((c) => c.tipo === tipo && c.refId === refId).length;
+
+                  const comunidadCount = contarPorForo("comunidad", "general");
+
+                  return (
+                    <div className="space-y-3">
+                      {/* Comunidad general */}
+                      <button
+                        onClick={() => handleAbrirForo({ tipo: "comunidad", refId: "general", titulo: "Comunidad general" })}
+                        className="flex w-full items-center justify-between rounded-2xl bg-white p-5 text-left shadow-sm transition-all hover:shadow-md"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-wine-50">
+                            <svg className="h-5 w-5 text-wine-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-gray-900">Comunidad general</h3>
+                            <p className="text-xs text-gray-500">{comunidadCount} {comunidadCount === 1 ? "comentario" : "comentarios"}</p>
+                          </div>
+                        </div>
+                        <svg className="h-5 w-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+
+                      {/* Foros por programa */}
+                      {programas.map((p) => {
+                        const count = contarPorForo("programa", p.id);
+                        return (
+                          <button
+                            key={p.id}
+                            onClick={() => handleAbrirForo({ tipo: "programa", refId: p.id, titulo: `Foro: ${p.titulo}` })}
+                            className="flex w-full items-center justify-between rounded-2xl bg-white p-5 text-left shadow-sm transition-all hover:shadow-md"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-wine-50">
+                                <svg className="h-5 w-5 text-wine-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                </svg>
+                              </div>
+                              <div>
+                                <h3 className="font-bold text-gray-900">{p.titulo}</h3>
+                                <p className="text-xs text-gray-500">
+                                  {count} {count === 1 ? "comentario" : "comentarios"}
+                                  {!p.publicado && " · No publicado"}
+                                </p>
+                              </div>
+                            </div>
+                            <svg className="h-5 w-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                        );
+                      })}
+
+                      {programas.length === 0 && (
+                        <p className="py-4 text-center text-sm text-gray-400">No tienes programas creados todavia.</p>
+                      )}
                     </div>
-                    <button
-                      onClick={() => handleEliminarComentario(c.id)}
-                      className="ml-4 flex-shrink-0 rounded-lg p-2 text-gray-400 transition-all hover:bg-red-50 hover:text-red-500"
-                      title="Eliminar"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
+                  );
+                })()}
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => { setForoSeleccionado(null); setForoComentarios([]); }}
+                  className="mb-4 flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Volver a foros
+                </button>
+                {foroLoading ? (
+                  <div className="flex min-h-[30vh] items-center justify-center">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-wine-600" />
                   </div>
-                ))}
-              </div>
+                ) : (
+                  <ComunidadTab
+                    email={session?.user?.email || ""}
+                    perfil={{
+                      email: session?.user?.email || "",
+                      nombre: session?.user?.name || "Coach",
+                      avatar: "",
+                      bio: "",
+                    }}
+                    comentarios={foroComentarios}
+                    setComentarios={setForoComentarios}
+                    nombreGuardado={true}
+                    setNombreGuardado={() => {}}
+                    setPerfil={() => {}}
+                    onGuardarPerfil={() => {}}
+                    tipo={foroSeleccionado.tipo}
+                    refId={foroSeleccionado.refId}
+                    titulo={foroSeleccionado.titulo}
+                    subtitulo="Responde como Coach — tus respuestas aparecerán con una insignia especial"
+                    adminMode={true}
+                  />
+                )}
+              </>
             )}
           </div>
         )}

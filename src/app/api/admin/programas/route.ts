@@ -21,6 +21,7 @@ export async function GET() {
             },
           },
         },
+        reuniones: { orderBy: { fecha: "desc" } },
       },
     });
 
