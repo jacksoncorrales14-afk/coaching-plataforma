@@ -34,11 +34,6 @@ export default function ProgramasPage() {
     return () => controller.abort();
   }, []);
 
-  const handleComprar = (prog: Programa) => {
-    // TODO: Integrar Stripe
-    alert(`Proximamente: Pago con Stripe por $${prog.precio.toFixed(2)} para "${prog.titulo}"`);
-  };
-
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -67,91 +62,36 @@ export default function ProgramasPage() {
             <p className="text-gray-500">Proximamente se publicaran programas.</p>
           </div>
         ) : (
-          <div className="grid gap-8 md:grid-cols-2">
-            {programas.map((prog) => {
-              const totalNiveles = prog.niveles.length;
-              const totalVideos = prog.niveles.reduce((s, n) => s + n._count.videos, 0);
-
-              return (
-                <div key={prog.id} className="overflow-hidden rounded-2xl bg-white shadow-sm transition-all hover:shadow-xl">
-                  {/* Portada */}
-                  <div className="relative h-52 bg-gradient-to-br from-wine-600 to-wine-800">
-                    {prog.imagen && (
-                      <Image
-                        src={prog.imagen}
-                        alt={prog.titulo}
-                        fill
-                        sizes="(max-width: 768px) 100vw, 50vw"
-                        className="object-cover opacity-40"
-                        style={{ objectPosition: prog.imagenPos || "50% 50%" }}
-                      />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-6">
-                      <h2 className="text-2xl font-bold text-white">{prog.titulo}</h2>
-                      <div className="mt-2 flex gap-3 text-xs text-white/70">
-                        <span>{totalNiveles} niveles</span>
-                        <span>{totalVideos} videos</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Contenido */}
-                  <div className="p-6">
-                    <p className="mb-4 text-sm leading-relaxed text-gray-500">
-                      {prog.descripcion}
-                    </p>
-
-                    {/* Niveles preview */}
-                    <div className="mb-6 space-y-2">
-                      {prog.niveles.slice(0, 4).map((nivel, i) => (
-                        <div key={nivel.id} className="flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2">
-                          <span className={`flex h-6 w-6 items-center justify-center rounded text-xs font-bold ${
-                            i === 0 ? "bg-wine-600 text-white" : "bg-gray-200 text-gray-500"
-                          }`}>
-                            {i + 1}
-                          </span>
-                          <span className="text-sm text-gray-700">{nivel.titulo}</span>
-                          <span className="ml-auto text-xs text-gray-400">{nivel._count.videos} videos</span>
-                        </div>
-                      ))}
-                      {prog.niveles.length > 4 && (
-                        <p className="text-center text-xs text-gray-400">
-                          +{prog.niveles.length - 4} niveles mas
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Precio y acciones */}
-                    <div className="flex items-center justify-between border-t border-gray-100 pt-4">
-                      <div>
-                        {prog.precio > 0 ? (
-                          <span className="text-2xl font-bold text-gray-900">${prog.precio.toFixed(2)}</span>
-                        ) : (
-                          <span className="text-sm font-medium text-wine-600">Incluido en membresia</span>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        {prog.precio > 0 && (
-                          <button
-                            onClick={() => handleComprar(prog)}
-                            className="rounded-full bg-wine-600 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-wine-700"
-                          >
-                            Comprar
-                          </button>
-                        )}
-                        <Link
-                          href="/membresia"
-                          className="rounded-full border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50"
-                        >
-                          Ver membresia
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {programas.map((prog) => (
+              <div key={prog.id} className="group overflow-hidden rounded-3xl bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl">
+                {/* Portada */}
+                <div className="relative h-48 bg-gradient-to-br from-wine-600 to-wine-800">
+                  {prog.imagen && (
+                    <Image
+                      src={prog.imagen}
+                      alt={prog.titulo}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                      className="object-cover"
+                      style={{ objectPosition: prog.imagenPos || "50% 50%" }}
+                    />
+                  )}
                 </div>
-              );
-            })}
+                {/* Info */}
+                <div className="p-5">
+                  <h3 className="mb-4 line-clamp-2 text-center text-lg font-bold text-gray-900">
+                    {prog.titulo}
+                  </h3>
+                  <Link
+                    href={`/programas/${prog.id}`}
+                    className="block w-full rounded-full bg-wine-600 px-5 py-2.5 text-center text-sm font-semibold text-white transition-all hover:bg-wine-700"
+                  >
+                    Ir al programa
+                  </Link>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

@@ -277,10 +277,27 @@ export default function EditarProgramaPage() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      <button onClick={() => router.push("/admin")} className="mb-6 text-sm text-gray-500 hover:text-gray-700">
-        &larr; Volver al panel
-      </button>
+    <div className="mx-auto max-w-4xl px-4 py-8 pb-28 sm:px-6">
+      <div className="mb-6 flex items-center gap-2">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50"
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Atras
+        </button>
+        <button
+          onClick={() => router.push("/admin")}
+          className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50"
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+          Panel admin
+        </button>
+      </div>
       <h1 className="mb-8 text-3xl font-bold text-gray-900">Editar Programa</h1>
 
       {/* Info del programa */}
@@ -333,10 +350,7 @@ export default function EditarProgramaPage() {
               Publicado (visible para miembros y compradores)
             </label>
           </div>
-          <div className="flex items-center justify-between">
-            <button onClick={handleGuardar} className="btn-primary px-6 py-2.5" disabled={saving}>
-              {saving ? "Guardando..." : "Guardar cambios"}
-            </button>
+          <div className="flex items-center justify-end">
             <button onClick={handleEliminar} className="text-sm font-medium text-red-500 hover:text-red-700" disabled={deleting}>
               {deleting ? "Eliminando..." : "Eliminar programa"}
             </button>
@@ -662,6 +676,19 @@ export default function EditarProgramaPage() {
             </button>
             <p className="text-xs text-gray-400">Despues de la reunion, edita la entrada y agrega el URL de YouTube/Vimeo con la grabacion.</p>
           </div>
+        </div>
+      </div>
+
+      {/* Barra fija con guardar al final */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur-sm sm:px-6">
+        <div className="mx-auto flex max-w-4xl items-center justify-end">
+          <button
+            onClick={handleGuardar}
+            disabled={saving}
+            className="btn-primary px-8 py-2.5"
+          >
+            {saving ? "Guardando..." : "Guardar cambios"}
+          </button>
         </div>
       </div>
     </div>

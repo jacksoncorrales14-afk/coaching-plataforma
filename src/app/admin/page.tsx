@@ -387,125 +387,49 @@ export default function AdminPage() {
                 </Link>
               </div>
             ) : (
-              <div className="space-y-8">
-                {programas.map(prog => {
-                  const totalVideos = prog.niveles.reduce((s, n) => s + n.videos.length, 0);
-                  return (
-                    <div key={prog.id} className="overflow-hidden rounded-2xl bg-white shadow-sm">
-                      {/* Header con portada */}
-                      <div className="relative h-48 bg-gradient-to-br from-wine-600 to-wine-800">
-                        {prog.imagen && (
-                          <Image
-                            src={prog.imagen}
-                            alt={prog.titulo}
-                            fill
-                            sizes="(max-width: 768px) 100vw, 50vw"
-                            className="object-cover opacity-40"
-                          />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                        <div className="absolute bottom-0 left-0 right-0 p-6">
-                          <div className="mb-2 flex items-center gap-2">
-                            <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                              prog.publicado
-                                ? "bg-green-500/20 text-green-200"
-                                : "bg-white/20 text-white"
-                            }`}>
-                              {prog.publicado ? "Publicado" : "Borrador"}
-                            </span>
-                            <span className="text-xs text-white/60">
-                              {prog.niveles.length} niveles · {totalVideos} videos
-                            </span>
-                          </div>
-                          <h3 className="text-2xl font-bold text-white">{prog.titulo}</h3>
-                          <p className="mt-1 text-sm text-white/70">{prog.descripcion}</p>
-                        </div>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {programas.map(prog => (
+                  <div key={prog.id} className="overflow-hidden rounded-2xl bg-white shadow-sm transition-all hover:shadow-md">
+                    {/* Portada */}
+                    <div className="relative h-40 bg-gradient-to-br from-wine-600 to-wine-800">
+                      {prog.imagen && (
+                        <Image
+                          src={prog.imagen}
+                          alt={prog.titulo}
+                          fill
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                          className="object-cover"
+                        />
+                      )}
+                      {!prog.publicado && (
+                        <span className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-0.5 text-[10px] font-semibold uppercase text-gray-700 backdrop-blur-sm">
+                          Borrador
+                        </span>
+                      )}
+                    </div>
+                    {/* Info */}
+                    <div className="p-5">
+                      <h3 className="mb-4 line-clamp-2 text-lg font-bold text-gray-900">{prog.titulo}</h3>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setSeccion("comunidad");
+                            handleAbrirForo({ tipo: "programa", refId: prog.id, titulo: `Foro: ${prog.titulo}` });
+                          }}
+                          className="flex-1 rounded-full border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50"
+                        >
+                          Ver foro
+                        </button>
                         <Link
                           href={`/admin/programas/${prog.id}`}
-                          className="absolute right-4 top-4 rounded-xl bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-all hover:bg-white/30"
+                          className="flex-1 rounded-full bg-wine-600 px-3 py-2 text-center text-xs font-medium text-white transition-all hover:bg-wine-700"
                         >
                           Editar
                         </Link>
                       </div>
-
-                      {/* Timeline de niveles */}
-                      <div className="p-6">
-                        <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
-                          Progreso del programa
-                        </p>
-
-                        {/* Barra de progreso visual */}
-                        <div className="mb-6 flex items-center gap-1">
-                          {prog.niveles.map((_, i) => (
-                            <div key={i} className="flex flex-1 items-center">
-                              <div className="h-1.5 w-full rounded-full bg-wine-100" />
-                              {i < prog.niveles.length - 1 && (
-                                <div className="mx-0.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-wine-200" />
-                              )}
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Cards de niveles */}
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                          {prog.niveles.map((nivel, i) => (
-                            <div
-                              key={nivel.id}
-                              className="group relative overflow-hidden rounded-xl border border-gray-100 bg-gray-50 p-4 transition-all hover:border-wine-200 hover:bg-white hover:shadow-md"
-                            >
-                              {/* Número del nivel */}
-                              <div className="mb-3 flex items-center justify-between">
-                                <div className="flex items-center gap-2.5">
-                                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-wine-600 text-sm font-bold text-white shadow-sm">
-                                    {i + 1}
-                                  </span>
-                                  <div>
-                                    <h4 className="text-sm font-bold text-gray-900">{nivel.titulo}</h4>
-                                    <p className="text-[11px] text-gray-400">
-                                      {nivel.videos.length} {nivel.videos.length === 1 ? "video" : "videos"}
-                                    </p>
-                                  </div>
-                                </div>
-                                {/* Icono de candado para niveles > 1 */}
-                                {i > 0 && (
-                                  <svg className="h-4 w-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                  </svg>
-                                )}
-                              </div>
-
-                              {/* Lista de videos */}
-                              {nivel.videos.length > 0 ? (
-                                <div className="space-y-1.5">
-                                  {nivel.videos.map((v, j) => (
-                                    <div key={v.id} className="flex items-center gap-2 rounded-lg bg-white px-2.5 py-1.5 text-xs text-gray-600">
-                                      <svg className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                      </svg>
-                                      <span className="truncate">{v.titulo || `Video ${j + 1}`}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="text-xs text-gray-400 italic">Sin videos aun</p>
-                              )}
-
-                              {/* Conector visual entre niveles */}
-                              {i < prog.niveles.length - 1 && (
-                                <div className="absolute -right-3 top-1/2 z-10 hidden -translate-y-1/2 lg:block">
-                                  <svg className="h-6 w-6 text-wine-300" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M10 6l6 6-6 6V6z" />
-                                  </svg>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             )}
           </div>

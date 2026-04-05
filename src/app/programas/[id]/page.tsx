@@ -234,9 +234,26 @@ export default function ProgramaPage() {
           <Image src={programa.imagen} alt="" fill sizes="100vw" className="object-cover opacity-20" style={{ objectPosition: programa.imagenPos }} />
         )}
         <div className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6">
-          <Link href="/mi-cuenta/dashboard" className="mb-3 inline-block text-sm text-wine-200 hover:text-white">
-            &larr; Volver al dashboard
-          </Link>
+          <div className="mb-3 flex items-center gap-2">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition-all hover:bg-white/20"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Atras
+            </button>
+            <Link
+              href="/mi-cuenta/dashboard"
+              className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition-all hover:bg-white/20"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+              Inicio
+            </Link>
+          </div>
           <h1 className="text-2xl font-bold text-white">{programa.titulo}</h1>
           <p className="mt-1 text-sm text-wine-100">{programa.descripcion}</p>
 
