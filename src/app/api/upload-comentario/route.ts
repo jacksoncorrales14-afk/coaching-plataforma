@@ -94,8 +94,8 @@ export async function POST(req: NextRequest) {
       .getPublicUrl(filePath);
 
     return NextResponse.json({ url: urlData.publicUrl, tipo });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
+  } catch (error: any) {
+    console.error("[UPLOAD-COMENTARIO]", error);
+    return NextResponse.json({ error: error?.message || "Error interno del servidor" }, { status: 500 });
   }
 }
