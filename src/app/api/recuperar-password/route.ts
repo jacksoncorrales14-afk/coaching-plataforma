@@ -32,11 +32,13 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      const baseUrl =
+      // Usar el origin real de la request (más confiable que NEXTAUTH_URL)
+      const origin =
+        req.headers.get("origin") ||
+        (req.headers.get("host") ? `https://${req.headers.get("host")}` : null) ||
         process.env.NEXTAUTH_URL ||
-        process.env.NEXT_PUBLIC_APP_URL ||
         "https://coaching-plataforma-1.onrender.com";
-      const resetUrl = `${baseUrl}/reset-password/${token}`;
+      const resetUrl = `${origin}/reset-password/${token}`;
 
       try {
         await enviarEmailRestablecerPassword(user.email, user.name || "", resetUrl);
