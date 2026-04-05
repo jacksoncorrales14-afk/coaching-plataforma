@@ -86,7 +86,7 @@ export async function PUT(req: NextRequest) {
 
     const programa = await prisma.programa.update({
       where: { id: data.id },
-      data: { titulo: data.titulo, descripcion: data.descripcion, imagen: data.imagen, imagenPos: data.imagenPos, precio: data.precio, publicado: data.publicado },
+      data: { titulo: data.titulo, descripcion: data.descripcion, imagen: data.imagen, imagenPos: data.imagenPos, precio: data.precio, publicado: data.publicado, foroNombre: data.foroNombre },
     });
 
     return NextResponse.json(programa);

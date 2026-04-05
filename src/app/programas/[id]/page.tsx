@@ -42,6 +42,7 @@ interface Programa {
   imagenPos: string;
   precio: number;
   tieneAcceso: boolean;
+  foroNombre: string;
   niveles: Nivel[];
 }
 
@@ -494,7 +495,7 @@ export default function ProgramaPage() {
                 </svg>
               </div>
               <div className="text-left">
-                <h3 className="font-bold text-gray-900">Foro del Programa</h3>
+                <h3 className="font-bold text-gray-900">{programa?.foroNombre || "Foro del Programa"}</h3>
                 <p className="text-sm text-gray-500">
                   {comentarios.length} {comentarios.length === 1 ? "comentario" : "comentarios"} · Preguntas y discusiones
                 </p>
@@ -524,7 +525,7 @@ export default function ProgramaPage() {
                 onGuardarPerfil={handleGuardarPerfil}
                 tipo="programa"
                 refId={params.id as string}
-                titulo="Foro del Programa"
+                titulo={programa?.foroNombre || "Foro del Programa"}
                 subtitulo="Comparte dudas, ideas y conecta con otras alumnas del programa"
               />
             </div>

@@ -116,6 +116,7 @@ export const updateProgramaSchema = z.object({
   imagenPos: z.string().optional(),
   precio: z.number().min(0).optional(),
   publicado: z.boolean().optional(),
+  foroNombre: z.string().optional(),
 });
 
 export const deleteByIdSchema = z.object({

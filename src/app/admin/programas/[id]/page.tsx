@@ -29,6 +29,7 @@ interface Programa {
   imagenPos: string;
   precio: number;
   publicado: boolean;
+  foroNombre: string;
   niveles: Nivel[];
 }
 
@@ -43,6 +44,7 @@ export default function EditarProgramaPage() {
   const [imagenPos, setImagenPos] = useState("50% 50%");
   const [precio, setPrecio] = useState(0);
   const [publicado, setPublicado] = useState(false);
+  const [foroNombre, setForoNombre] = useState("Foro del Programa");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -73,6 +75,7 @@ export default function EditarProgramaPage() {
       setImagenPos(prog.imagenPos || "50% 50%");
       setPrecio(prog.precio || 0);
       setPublicado(prog.publicado);
+      setForoNombre(prog.foroNombre || "Foro del Programa");
     }
     setLoading(false);
   };
@@ -106,7 +109,7 @@ export default function EditarProgramaPage() {
     await fetch("/api/admin/programas", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: programa.id, titulo, descripcion, imagen, imagenPos, precio, publicado }),
+      body: JSON.stringify({ id: programa.id, titulo, descripcion, imagen, imagenPos, precio, publicado, foroNombre }),
     });
     setSaving(false);
     await cargarPrograma();
@@ -222,6 +225,17 @@ export default function EditarProgramaPage() {
               placeholder="0.00"
             />
             <p className="mt-1 text-xs text-gray-400">Si es 0, solo estara disponible con membresia</p>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Nombre del foro</label>
+            <input
+              type="text"
+              value={foroNombre}
+              onChange={(e) => setForoNombre(e.target.value)}
+              placeholder="Foro del Programa"
+              className="input-field"
+            />
+            <p className="mt-1 text-xs text-gray-400">Titulo que se muestra en la seccion de foro del programa</p>
           </div>
           <div className="flex items-center gap-3">
             <input
