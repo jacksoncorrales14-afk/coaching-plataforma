@@ -37,133 +37,36 @@ export function ProgramasTab({ programas }: { programas: any[] }) {
           </p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {programas.map((prog: any) => (
             <div
               key={prog.id}
-              className="overflow-hidden rounded-2xl bg-white shadow-sm"
+              className="group overflow-hidden rounded-3xl bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
             >
               {/* Portada */}
-              <div className="relative h-44 bg-gradient-to-br from-wine-600 to-wine-800">
+              <div className="relative h-36 bg-gradient-to-br from-wine-600 to-wine-800">
                 {prog.imagen && (
                   <Image
                     src={prog.imagen}
                     alt={prog.titulo}
                     fill
-                    sizes="100vw"
-                    className="object-cover opacity-40"
-                    style={{
-                      objectPosition: prog.imagenPos || "50% 50%",
-                    }}
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    className="object-cover"
+                    style={{ objectPosition: prog.imagenPos || "50% 50%" }}
                   />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between p-6">
-                  <div>
-                    <h3 className="text-2xl font-bold text-white">
-                      {prog.titulo}
-                    </h3>
-                    <p className="mt-1 text-sm text-white/70">
-                      {prog.descripcion}
-                    </p>
-                  </div>
-                  <Link
-                    href={`/programas/${prog.id}`}
-                    className="flex-shrink-0 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-wine-600 shadow-lg transition-all hover:bg-nude-50"
-                  >
-                    Ir al programa
-                  </Link>
-                </div>
               </div>
-
-              {/* Niveles como timeline */}
-              <div className="p-6">
-                <div className="relative">
-                  <div className="absolute bottom-0 left-4 top-0 w-0.5 bg-gray-200" />
-                  <div className="space-y-6">
-                    {(prog.niveles || []).length === 0 ? (
-                      <p className="ml-12 text-sm text-gray-400">
-                        Este programa aun no tiene niveles.
-                      </p>
-                    ) : (
-                      (prog.niveles || []).map(
-                        (nivel: any, i: number) => {
-                          const desbloqueado = i === 0;
-                          return (
-                            <div
-                              key={nivel.id || i}
-                              className="relative flex gap-4"
-                            >
-                              <div
-                                className={`relative z-10 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
-                                  desbloqueado
-                                    ? "bg-wine-600 text-white"
-                                    : "bg-gray-200 text-gray-500"
-                                }`}
-                              >
-                                {desbloqueado ? (
-                                  <span className="text-xs font-bold">
-                                    {i + 1}
-                                  </span>
-                                ) : (
-                                  <svg
-                                    className="h-3.5 w-3.5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                    aria-hidden="true"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                                    />
-                                  </svg>
-                                )}
-                              </div>
-                              <div
-                                className={`flex-1 rounded-xl border p-4 transition-all ${
-                                  desbloqueado
-                                    ? "border-wine-100 bg-wine-50/30 hover:shadow-md"
-                                    : "border-gray-100 bg-gray-50 opacity-60"
-                                }`}
-                              >
-                                <div className="mb-1 flex items-center justify-between">
-                                  <h4 className="font-bold text-gray-900">
-                                    {nivel.titulo}
-                                  </h4>
-                                  <span
-                                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                                      desbloqueado
-                                        ? "bg-wine-100 text-wine-600"
-                                        : "bg-gray-200 text-gray-500"
-                                    }`}
-                                  >
-                                    {desbloqueado
-                                      ? "Disponible"
-                                      : "Bloqueado"}
-                                  </span>
-                                </div>
-                                {nivel.descripcion && (
-                                  <p className="mb-2 text-xs text-gray-500">
-                                    {nivel.descripcion}
-                                  </p>
-                                )}
-                                <p className="text-xs text-gray-400">
-                                  {nivel.videos?.length ||
-                                    nivel._count?.videos ||
-                                    0}{" "}
-                                  videos
-                                </p>
-                              </div>
-                            </div>
-                          );
-                        }
-                      )
-                    )}
-                  </div>
-                </div>
+              {/* Info */}
+              <div className="p-4">
+                <h3 className="mb-3 line-clamp-2 text-center text-base font-bold text-gray-900">
+                  {prog.titulo}
+                </h3>
+                <Link
+                  href={`/programas/${prog.id}`}
+                  className="block w-full rounded-full bg-wine-600 px-4 py-2 text-center text-sm font-semibold text-white transition-all hover:bg-wine-700"
+                >
+                  Ir al programa
+                </Link>
               </div>
             </div>
           ))}
