@@ -123,3 +123,34 @@ export async function enviarConfirmacionVideollamada(
     html,
   });
 }
+
+export async function enviarEmailRestablecerPassword(
+  email: string,
+  nombre: string,
+  resetUrl: string
+) {
+  const html = `
+    <div style="max-width:500px;margin:0 auto;font-family:Arial,sans-serif;color:#333">
+      <div style="text-align:center;padding:20px 0;border-bottom:2px solid #722F37">
+        <h1 style="margin:0;color:#722F37;font-size:22px">Deby Chantell Coach Academy</h1>
+      </div>
+      <div style="padding:24px 16px">
+        <h2 style="margin:0 0 8px;font-size:18px">Restablece tu contraseña</h2>
+        <p style="color:#666;font-size:14px;margin:0 0 20px">Hola ${nombre}, recibimos una solicitud para restablecer la contraseña de tu cuenta.</p>
+        <div style="text-align:center;margin:28px 0">
+          <a href="${resetUrl}" style="display:inline-block;background:#722F37;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:bold;font-size:14px">Restablecer contraseña</a>
+        </div>
+        <p style="color:#666;font-size:13px;margin:0 0 8px">O copia y pega este enlace en tu navegador:</p>
+        <p style="color:#722F37;font-size:12px;word-break:break-all;margin:0 0 20px">${resetUrl}</p>
+        <p style="color:#999;font-size:12px;margin:20px 0 0">Este enlace expirará en 1 hora. Si no solicitaste restablecer tu contraseña, puedes ignorar este correo.</p>
+      </div>
+    </div>
+  `;
+
+  await getResend().emails.send({
+    from: "Deby Chantell Academy <onboarding@resend.dev>",
+    to: email,
+    subject: "Restablece tu contraseña - Deby Chantell Coach Academy",
+    html,
+  });
+}

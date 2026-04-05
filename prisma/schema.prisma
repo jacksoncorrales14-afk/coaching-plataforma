@@ -41,6 +41,20 @@ model User {
   role      String   @default("admin") // admin = la coach
   createdAt DateTime @default(now())
   clases    Clase[]
+  resetTokens PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([userId])
 }
 
 // Nota: "Clase" en el schema = "Curso" en la UI. Se mantiene "Clase" por compatibilidad.
