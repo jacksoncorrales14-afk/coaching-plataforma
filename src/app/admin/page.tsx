@@ -94,6 +94,8 @@ export default function AdminPage() {
   const [foroSeleccionado, setForoSeleccionado] = useState<ForoSeleccionado | null>(null);
   const [foroComentarios, setForoComentarios] = useState<any[]>([]);
   const [foroLoading, setForoLoading] = useState(false);
+  const [adminAvatar, setAdminAvatar] = useState<string>("");
+  const [subiendoAvatar, setSubiendoAvatar] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -110,7 +112,8 @@ export default function AdminPage() {
         fetch("/api/admin/videollamadas").then(r => r.ok ? r.json() : []),
         fetch("/api/admin/config").then(r => r.ok ? r.json() : { precioVideollamada: 50, videollamadaActiva: true }),
         fetch("/api/admin/disponibilidad").then(r => r.ok ? r.json() : []),
-      ]).then(([clasesData, memData, statsData, comData, progData, videoData, configData, bloquesData]) => {
+        fetch("/api/admin/profile").then(r => r.ok ? r.json() : null),
+      ]).then(([clasesData, memData, statsData, comData, progData, videoData, configData, bloquesData, profileData]) => {
         setClases(clasesData);
         setMembresias(Array.isArray(memData) ? memData : []);
         setStats(statsData);
@@ -120,6 +123,7 @@ export default function AdminPage() {
         setBloques(Array.isArray(bloquesData) ? bloquesData : []);
         setConfigPrecio(configData.precioVideollamada ?? 50);
         setConfigActiva(configData.videollamadaActiva ?? true);
+        if (profileData?.avatar) setAdminAvatar(profileData.avatar);
         setLoading(false);
       });
     }
@@ -165,6 +169,36 @@ export default function AdminPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ [campo]: valor }),
     });
+  };
+
+  const handleSubirAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSubiendoAvatar(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const up = await fetch("/api/upload", { method: "POST", body: form });
+      const upData = await up.json();
+      if (!up.ok) {
+        alert(upData.error || "Error al subir imagen");
+        return;
+      }
+      const save = await fetch("/api/admin/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatar: upData.url }),
+      });
+      if (save.ok) {
+        setAdminAvatar(upData.url);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error al actualizar avatar");
+    } finally {
+      setSubiendoAvatar(false);
+      e.target.value = "";
+    }
   };
 
   const handleAbrirForo = async (f: ForoSeleccionado) => {
@@ -218,8 +252,30 @@ export default function AdminPage() {
       {/* Sidebar */}
       <aside className="sticky top-0 flex h-screen w-64 flex-col border-r border-gray-200 bg-white">
         <div className="border-b border-gray-100 p-5">
-          <h2 className="text-lg font-bold text-gray-900">Panel Admin</h2>
-          <p className="text-xs text-gray-500">{session.user.name}</p>
+          <div className="flex items-center gap-3">
+            <label className="group relative h-12 w-12 flex-shrink-0 cursor-pointer overflow-hidden rounded-full bg-wine-100">
+              {adminAvatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={adminAvatar} alt="Avatar" className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-lg font-bold text-wine-600">
+                  {(session.user.name || "C").charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <input type="file" accept="image/*" onChange={handleSubirAvatar} disabled={subiendoAvatar} className="hidden" />
+            </label>
+            <div className="min-w-0 flex-1">
+              <h2 className="truncate text-sm font-bold text-gray-900">Panel Admin</h2>
+              <p className="truncate text-xs text-gray-500">{session.user.name}</p>
+              {subiendoAvatar && <p className="text-[10px] text-wine-600">Subiendo...</p>}
+            </div>
+          </div>
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {menu.map(m => (
@@ -594,7 +650,7 @@ export default function AdminPage() {
                     perfil={{
                       email: session?.user?.email || "",
                       nombre: session?.user?.name || "Coach",
-                      avatar: "",
+                      avatar: adminAvatar,
                       bio: "",
                     }}
                     comentarios={foroComentarios}

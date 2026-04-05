@@ -30,7 +30,11 @@ export async function POST(req: NextRequest) {
 
     const session = await getServerSession(authOptions);
     const adminEmail = session?.user?.email || "";
-    const adminNombre = session?.user?.name || "Coach";
+    const adminUser = adminEmail
+      ? await prisma.user.findUnique({ where: { email: adminEmail }, select: { name: true, avatar: true } })
+      : null;
+    const adminNombre = adminUser?.name || session?.user?.name || "Coach";
+    const adminAvatar = adminUser?.avatar || "";
 
     const { data, error: valError } = parseBody(comentarioAdminSchema, await req.json());
     if (valError) return valError;
@@ -39,7 +43,7 @@ export async function POST(req: NextRequest) {
       data: {
         email: adminEmail,
         nombre: adminNombre,
-        avatar: "",
+        avatar: adminAvatar,
         contenido: data.contenido.trim(),
         mediaUrl: data.mediaUrl,
         mediaTipo: data.mediaTipo,

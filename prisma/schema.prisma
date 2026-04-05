@@ -38,6 +38,7 @@ model User {
   email     String   @unique
   password  String
   name      String
+  avatar    String   @default("")
   role      String   @default("admin") // admin = la coach
   createdAt DateTime @default(now())
   clases    Clase[]
